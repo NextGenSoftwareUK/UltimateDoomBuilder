@@ -7,11 +7,11 @@ using System.Runtime.InteropServices;
 // General Information about an assembly is controlled through the following 
 // set of attributes. Change these attribute values to modify the information
 // associated with an assembly.
-[assembly: AssemblyTitle("ODOOM Editor By NextGen World Ltd")]
-[assembly: AssemblyDescription("ZDoom, GZDoom and Zandronum map editor (can be used for Vanilla/Boom mapping too!)")]
+[assembly: AssemblyTitle("ODOOM Editor")]
+[assembly: AssemblyDescription("ODOOM Editor is a fork of Ultimate Doom Builder. Thanks to the Ultimate Doom Builder team for their great work. ZDoom, GZDoom and Zandronum map editor (can be used for Vanilla/Boom mapping too!).")]
 [assembly: AssemblyConfiguration("")]
 [assembly: AssemblyCompany("NextGen World Ltd")]
-[assembly: AssemblyProduct("ODOOM Editor By NextGen World Ltd")]
+[assembly: AssemblyProduct("ODOOM Editor")]
 [assembly: AssemblyCopyright("Copyright © 2007, 2016, 2017-2019")]
 [assembly: AssemblyTrademark("")]
 [assembly: AssemblyCulture("")]

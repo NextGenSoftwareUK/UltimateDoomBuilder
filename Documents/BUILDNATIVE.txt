@@ -1,7 +1,7 @@
 BuilderNative.dll – Required for map rendering
 ==============================================
 
-When you open a map, ODOOM Editor By NextGen World Ltd loads BuilderNative.dll to create the OpenGL render device. If you see:
+When you open a map, ODOOM Editor loads BuilderNative.dll to create the OpenGL render device. If you see:
 
   System.DllNotFoundException: Unable to load DLL 'BuilderNative': The specified module could not be found.
 
@@ -30,4 +30,19 @@ Fix:
    BuilderNative is Source\Native\BuilderNative.vcxproj (needs C++ workload in VS).
 
 Architecture: Builder.exe (x64) requires BuilderNative.dll (x64). Win32 requires the Win32 DLL.
+
+Version mismatch (e.g. "BuilderModes.dll plugin's assembly version doesn't match main module")
+-------------------------------------------------------------------------------------------
+The main app and plugins get their revision from Git at build time. If you see a version
+mismatch (e.g. 4292 vs 4293), do:
+
+  1. Build → Rebuild Solution   (so all projects get the same Git revision)
+  2. Then run (F5) as usual.
+
+Builder now has build-order dependencies on BuilderModes and UDBScript, so when you build
+or run Builder from Visual Studio, those plugins are built first. That keeps versions in
+sync and ensures Build\Plugins\BuilderModes.dll and Build\Plugins\UDBScript.dll are
+up to date. The STAR menu (Help → OASIS STAR, View → OASIS STAR, Tools → OASIS STAR, ★ on
+File toolbar) comes from UDBScript; if it doesn't appear, Rebuild Solution and run again.
+
 

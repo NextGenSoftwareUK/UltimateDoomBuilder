@@ -88,5 +88,25 @@ namespace CodeImp.DoomBuilder.Windows
         {
             General.OpenWebsite("https://github.com/m-x-d/GZDoom-Builder");
         }
+
+        private void close_Click(object sender, EventArgs e)
+        {
+
+        }
+
+        private void label2_Click(object sender, EventArgs e)
+        {
+
+        }
+
+        private void gitlink_LinkClicked_1(object sender, LinkLabelLinkClickedEventArgs e)
+        {
+
+        }
+
+        private void linkLabel2_LinkClicked(object sender, LinkLabelLinkClickedEventArgs e)
+        {
+
+        }
     }
 }

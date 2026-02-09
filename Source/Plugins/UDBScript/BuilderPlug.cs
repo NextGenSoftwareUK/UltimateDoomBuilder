@@ -195,7 +195,7 @@ namespace CodeImp.DoomBuilder.UDBScript
 					if (i is ToolStripMenuItem mi && mi.Tag != null) mi.Click += (s, e) => General.Interface.InvokeTaggedAction(s, e);
 				General.Interface.AddMenu(menuStarUnderTools, CodeImp.DoomBuilder.Windows.MenuSection.ToolsTesting);
 
-				// Also under View: View → OASIS STAR (always visible)
+				// Also under View: View → OASIS STAR
 				var menuStarUnderView = new ToolStripMenuItem("OASIS STAR");
 				menuStarUnderView.DropDownItems.Add(new ToolStripMenuItem("Place ODOOM / OQUAKE asset at cursor...") { Tag = "oasisstar_place_selected" });
 				menuStarUnderView.DropDownItems.Add(new ToolStripMenuItem("Open OASIS STAR panel") { Tag = "oasisstar_show_panel" });
@@ -206,7 +206,18 @@ namespace CodeImp.DoomBuilder.UDBScript
 					if (i is ToolStripMenuItem mi && mi.Tag != null) mi.Click += (s, e) => General.Interface.InvokeTaggedAction(s, e);
 				General.Interface.AddMenu(menuStarUnderView, CodeImp.DoomBuilder.Windows.MenuSection.ViewScriptEdit);
 
-				// Toolbar: File section (next to New/Open/Save – visible when File toolbar is on)
+				// Help menu: Help → OASIS STAR (always visible – add first so it’s easy to find)
+				var menuStarUnderHelp = new ToolStripMenuItem("OASIS STAR");
+				menuStarUnderHelp.DropDownItems.Add(new ToolStripMenuItem("Place ODOOM / OQUAKE asset at cursor...") { Tag = "oasisstar_place_selected" });
+				menuStarUnderHelp.DropDownItems.Add(new ToolStripMenuItem("Open OASIS STAR panel") { Tag = "oasisstar_show_panel" });
+				menuStarUnderHelp.DropDownItems.Add(new ToolStripSeparator());
+				menuStarUnderHelp.DropDownItems.Add(new ToolStripMenuItem("Convert OQUAKE .map → ODOOM...") { Tag = "oasisstar_convert_quake2doom" });
+				menuStarUnderHelp.DropDownItems.Add(new ToolStripMenuItem("Convert ODOOM map → OQUAKE .map...") { Tag = "oasisstar_convert_doom2quake" });
+				foreach (ToolStripItem i in menuStarUnderHelp.DropDownItems)
+					if (i is ToolStripMenuItem mi && mi.Tag != null) mi.Click += (s, e) => General.Interface.InvokeTaggedAction(s, e);
+				General.Interface.AddMenu(menuStarUnderHelp, CodeImp.DoomBuilder.Windows.MenuSection.HelpManual);
+
+				// Toolbar: File section (next to New/Open/Save)
 				buttonStar = new ToolStripButton();
 				buttonStar.DisplayStyle = ToolStripItemDisplayStyle.Text;
 				buttonStar.Text = "★";
@@ -215,7 +226,7 @@ namespace CodeImp.DoomBuilder.UDBScript
 				buttonStar.Click += (s, e) => General.Interface.InvokeTaggedAction(s, e);
 				General.Interface.AddButton(buttonStar, CodeImp.DoomBuilder.Windows.ToolbarSection.File);
 
-				General.WriteLogLine("OASIS STAR: Menu and toolbar added. Look for: ★ STAR (menu bar), View → OASIS STAR, Tools → OASIS STAR, ★ button on File toolbar.");
+				General.WriteLogLine("OASIS STAR: Menu and toolbar added. Look for: Help → OASIS STAR, View → OASIS STAR, Tools → OASIS STAR, ★ STAR (menu bar), ★ on File toolbar.");
 			}
 			catch (Exception ex)
 			{
@@ -225,6 +236,7 @@ namespace CodeImp.DoomBuilder.UDBScript
 				buttonStar = null;
 				starPanel = null;
 				starDocker = null;
+				try { System.Windows.Forms.MessageBox.Show("OASIS STAR could not be loaded.\r\n\r\nCheck Help → Show Error Log for details.\r\n\r\nMake sure you built the UDBScript project and run Builder.exe from the Build folder.", "ODOOM Editor", System.Windows.Forms.MessageBoxButtons.OK, System.Windows.Forms.MessageBoxIcon.Warning); } catch { }
 			}
 		}
 

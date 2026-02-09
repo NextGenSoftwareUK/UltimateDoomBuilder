@@ -1344,7 +1344,7 @@ namespace CodeImp.DoomBuilder.Windows
 			this.itemhelpabout.Image = global::CodeImp.DoomBuilder.Properties.Resources.About;
 			this.itemhelpabout.Name = "itemhelpabout";
 			this.itemhelpabout.Size = new System.Drawing.Size(232, 22);
-			this.itemhelpabout.Text = "&About ODOOM Editor By NextGen World Ltd...";
+			this.itemhelpabout.Text = "&About ODOOM Editor...";
 			this.itemhelpabout.Click += new System.EventHandler(this.itemhelpabout_Click);
 			// 
 			// toolbar
@@ -2873,7 +2873,7 @@ namespace CodeImp.DoomBuilder.Windows
 			this.MainMenuStrip = this.menumain;
 			this.Name = "MainForm";
 			this.StartPosition = System.Windows.Forms.FormStartPosition.Manual;
-			this.Text = Application.ProductName + " R" + General.ThisAssembly.GetName().Version.Revision;
+			this.Text = "ODOOM Editor By NextGen World Ltd R" + General.ThisAssembly.GetName().Version.Revision;
 			this.Deactivate += new System.EventHandler(this.MainForm_Deactivate);
 			this.Load += new System.EventHandler(this.MainForm_Load);
 			this.Shown += new System.EventHandler(this.MainForm_Shown);

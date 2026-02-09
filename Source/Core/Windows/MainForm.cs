@@ -2564,7 +2564,13 @@ namespace CodeImp.DoomBuilder.Windows
 				case MenuSection.ToolsTesting: menutools.DropDownItems.Add(menu); break;
 				case MenuSection.HelpManual: menuhelp.DropDownItems.Insert(menuhelp.DropDownItems.IndexOf(seperatorhelpmanual), menu); break;
 				case MenuSection.HelpAbout: menuhelp.DropDownItems.Add(menu); break;
-				case MenuSection.Top: menumain.Items.Insert(menumain.Items.IndexOf(menutools), menu); break;
+				case MenuSection.Top:
+					{
+						int idx = menumain.Items.IndexOf(menutools);
+						if (idx >= 0) menumain.Items.Insert(idx, menu);
+						else menumain.Items.Add(menu);
+					}
+					break;
 			}
 			
 			ApplyShortcutKeys(items);

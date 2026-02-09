@@ -5,11 +5,11 @@ using System.Runtime.InteropServices;
 // General Information about an assembly is controlled through the following 
 // set of attributes. Change these attribute values to modify the information
 // associated with an assembly.
-[assembly: AssemblyTitle("ODOOM Editor Updater By NextGen World Ltd")]
+[assembly: AssemblyTitle("ODOOM Editor Updater")]
 [assembly: AssemblyDescription("")]
 [assembly: AssemblyConfiguration("")]
 [assembly: AssemblyCompany("NextGen World Ltd")]
-[assembly: AssemblyProduct("ODOOM Editor By NextGen World Ltd")]
+[assembly: AssemblyProduct("ODOOM Editor")]
 [assembly: AssemblyCopyright("Copyright В© 2007, 2016, 2017-2019")]
 [assembly: AssemblyTrademark("")]
 [assembly: AssemblyCulture("")]

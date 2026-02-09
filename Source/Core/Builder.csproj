@@ -1633,7 +1633,17 @@
       <Install>false</Install>
     </BootstrapperPackage>
   </ItemGroup>
-  <ItemGroup />
+  <!-- Build-order dependencies: BuilderModes and UDBScript build before Builder so version numbers match and plugins are present in Build\Plugins when running from VS -->
+  <ItemGroup>
+    <ProjectReference Include="..\Plugins\BuilderModes\BuilderModes.csproj">
+      <Private>False</Private>
+      <ReferenceOutputAssembly>false</ReferenceOutputAssembly>
+    </ProjectReference>
+    <ProjectReference Include="..\Plugins\UDBScript\UDBScript.csproj">
+      <Private>False</Private>
+      <ReferenceOutputAssembly>false</ReferenceOutputAssembly>
+    </ProjectReference>
+  </ItemGroup>
   <PropertyGroup>
     <IsWindows Condition="'$(OS)' == 'Windows_NT'">true</IsWindows>
     <IsLinux Condition="'$(OS)' != 'Windows_NT'">true</IsLinux>

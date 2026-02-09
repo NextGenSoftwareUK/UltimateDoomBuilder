@@ -97,3 +97,5 @@ if (UDB.Map.isUDMF) {
 }
 UDB.log("OASIS STAR: Placed " + row[3] + " (type " + doomType + ") at cursor.");
 
+
+

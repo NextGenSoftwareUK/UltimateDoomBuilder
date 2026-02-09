@@ -121,7 +121,7 @@ namespace CodeImp.DoomBuilder.Plugins
 				if((thisrevision != 0) && (plug.MinimumRevision > thisrevision))
 				{
 					// Can't load this plugin because it is meant for a newer version
-					General.ErrorLogger.Add(ErrorType.Error, "Could not load plugin \"" + shortfilename + "\", the Plugin is made for ODOOM Editor By NextGen World Ltd R" + plug.MinimumRevision + " or newer and you are running R" + thisrevision + ".");
+					General.ErrorLogger.Add(ErrorType.Error, "Could not load plugin \"" + shortfilename + "\", the Plugin is made for ODOOM Editor R" + plug.MinimumRevision + " or newer and you are running R" + thisrevision + ".");
 					throw new InvalidProgramException();
 				}
 			}

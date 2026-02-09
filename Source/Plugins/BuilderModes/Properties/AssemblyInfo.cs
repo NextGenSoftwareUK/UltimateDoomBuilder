@@ -6,10 +6,10 @@ using System.Resources;
 // set of attributes. Change these attribute values to modify the information
 // associated with an assembly.
 [assembly: AssemblyTitle("Builder Modes")]
-[assembly: AssemblyDescription("ODOOM Editor By NextGen World Ltd Editing Modes")]
+[assembly: AssemblyDescription("ODOOM Editor Editing Modes")]
 [assembly: AssemblyConfiguration("")]
 [assembly: AssemblyCompany("NextGen World Ltd")]
-[assembly: AssemblyProduct("ODOOM Editor By NextGen World Ltd")]
+[assembly: AssemblyProduct("ODOOM Editor")]
 [assembly: AssemblyCopyright("Copyright © 2007, 2016, 2017-2019")]
 [assembly: AssemblyTrademark("")]
 [assembly: AssemblyCulture("")]

@@ -1,7 +1,7 @@
 [Desktop Entry]
 Version=1.0
 Type=Application
-Name=ODOOM Editor By NextGen World Ltd
+Name=ODOOM Editor
 Comment=Comprehensive map editor for Doom, Heretic, Hexen and Strife based games
 Exec=start-ultimatedoombuilder.sh
 Icon=io.github.ultimatedoombuilder.ultimatedoombuilder

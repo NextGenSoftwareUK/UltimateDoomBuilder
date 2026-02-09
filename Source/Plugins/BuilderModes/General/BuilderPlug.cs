@@ -152,11 +152,11 @@ namespace CodeImp.DoomBuilder.BuilderModes
 
 		#region ================== Properties
 
-		public override string Name { get { return "ODOOM Editor By NextGen World Ltd"; } } //mxd
+		public override string Name { get { return "ODOOM Editor"; } } //mxd
 		public static BuilderPlug Me { get { return me; } }
 
-		//mxd. BuilderModes.dll revision should always match the main module revision
-		public override bool StrictRevisionMatching { get { return true; } }
+		// Allow loading when revision is one step behind (e.g. main 4293, plugin 4292). Use Rebuild Solution to sync.
+		public override bool StrictRevisionMatching { get { return false; } }
 		public override int MinimumRevision { get { return Assembly.GetExecutingAssembly().GetName().Version.Revision; } }
 		
 		public MenusForm MenusForm { get { return menusform; } }

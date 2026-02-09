@@ -116,7 +116,7 @@ namespace mxd.GZDBUpdater
 			this.Name = "UpdateBlockedForm";
 			this.ShowInTaskbar = false;
 			this.StartPosition = System.Windows.Forms.FormStartPosition.CenterScreen;
-			this.Text = "ODOOM Editor Updater By NextGen World Ltd";
+			this.Text = "ODOOM Editor Updater";
 			this.FormClosing += new System.Windows.Forms.FormClosingEventHandler(this.UpdateBlockedForm_FormClosing);
 			this.panel1.ResumeLayout(false);
 			this.panel1.PerformLayout();

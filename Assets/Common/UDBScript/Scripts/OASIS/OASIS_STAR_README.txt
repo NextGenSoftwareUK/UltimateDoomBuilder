@@ -1,4 +1,4 @@
-OASIS STAR API – Cross-game assets in ODOOM Editor By NextGen World Ltd
+OASIS STAR API – Cross-game assets in ODOOM Editor
 ============================================================
 
 Where to find STAR
@@ -22,4 +22,6 @@ What STAR does
 Place asset: click in the 2D map, then use STAR → Place ODOOM/OQUAKE asset at cursor (or the ★ toolbar button). Choose the asset in the script dialog. OQUAKE assets are placed as their Doom-equivalent thing type for use in ODOOM maps.
 
 Next step: modify ODOOM and OQUAKE runtimes so cross-game assets work in-game (e.g. OQUAKE weapons in ODOOM).
+
+
 
