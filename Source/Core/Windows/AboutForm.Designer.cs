@@ -64,7 +64,7 @@ namespace CodeImp.DoomBuilder.Windows
             // 
             // pictureBox5
             // 
-            pictureBox5.BackgroundImage = global::CodeImp.DoomBuilder.Properties.Resources.GZDB_Logo_small;
+            pictureBox5.BackgroundImage = global::CodeImp.DoomBuilder.Properties.Resources.Splash3_small;
             pictureBox5.BackgroundImageLayout = System.Windows.Forms.ImageLayout.Stretch;
             pictureBox5.Location = new System.Drawing.Point(12, 10);
             pictureBox5.Name = "pictureBox5";
@@ -134,7 +134,7 @@ namespace CodeImp.DoomBuilder.Windows
             this.tabPage1.Padding = new System.Windows.Forms.Padding(3);
             this.tabPage1.Size = new System.Drawing.Size(568, 254);
             this.tabPage1.TabIndex = 0;
-            this.tabPage1.Text = "About Ultimate Doom Builder";
+            this.tabPage1.Text = "About ODOOM Editor By NextGen World Ltd";
             this.tabPage1.UseVisualStyleBackColor = true;
             // 
             // panel1
@@ -158,7 +158,7 @@ namespace CodeImp.DoomBuilder.Windows
             this.version.Name = "version";
             this.version.Size = new System.Drawing.Size(210, 13);
             this.version.TabIndex = 11;
-            this.version.Text = "Ultimate Doom Builder some version";
+            this.version.Text = "ODOOM Editor By NextGen World Ltd some version";
             // 
             // copyversion
             // 

@@ -1,15 +1,15 @@
-﻿using System.Reflection;
+using System.Reflection;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 
 // General Information about an assembly is controlled through the following 
 // set of attributes. Change these attribute values to modify the information
 // associated with an assembly.
-[assembly: AssemblyTitle("Ultimate Doom Builder Updater")]
+[assembly: AssemblyTitle("ODOOM Editor Updater By NextGen World Ltd")]
 [assembly: AssemblyDescription("")]
 [assembly: AssemblyConfiguration("")]
-[assembly: AssemblyCompany("CodeImp, MaxED, ZZYZX, boris, dpJudas and others")]
-[assembly: AssemblyProduct("Ultimate Doom Builder")]
+[assembly: AssemblyCompany("NextGen World Ltd")]
+[assembly: AssemblyProduct("ODOOM Editor By NextGen World Ltd")]
 [assembly: AssemblyCopyright("Copyright В© 2007, 2016, 2017-2019")]
 [assembly: AssemblyTrademark("")]
 [assembly: AssemblyCulture("")]

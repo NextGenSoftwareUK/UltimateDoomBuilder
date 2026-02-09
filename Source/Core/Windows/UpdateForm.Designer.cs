@@ -1,4 +1,4 @@
-﻿namespace CodeImp.DoomBuilder.Windows
+namespace CodeImp.DoomBuilder.Windows
 {
 	partial class UpdateForm
 	{
@@ -67,7 +67,7 @@
 			this.label.Name = "label";
 			this.label.Size = new System.Drawing.Size(393, 13);
 			this.label.TabIndex = 4;
-			this.label.Text = "Ultimate Doom Builder R[rev] is available. Changes since current revision:";
+			this.label.Text = "ODOOM Editor By NextGen World Ltd R[rev] is available. Changes since current revision:";
 			// 
 			// label2
 			// 

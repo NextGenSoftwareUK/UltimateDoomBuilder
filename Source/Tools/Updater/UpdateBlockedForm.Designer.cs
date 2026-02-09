@@ -1,4 +1,4 @@
-﻿namespace mxd.GZDBUpdater
+namespace mxd.GZDBUpdater
 {
 	partial class UpdateBlockedForm
 	{
@@ -116,7 +116,7 @@
 			this.Name = "UpdateBlockedForm";
 			this.ShowInTaskbar = false;
 			this.StartPosition = System.Windows.Forms.FormStartPosition.CenterScreen;
-			this.Text = "Ultimate Doom Builder Updater";
+			this.Text = "ODOOM Editor Updater By NextGen World Ltd";
 			this.FormClosing += new System.Windows.Forms.FormClosingEventHandler(this.UpdateBlockedForm_FormClosing);
 			this.panel1.ResumeLayout(false);
 			this.panel1.PerformLayout();

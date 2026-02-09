@@ -1,4 +1,4 @@
-﻿#region ================== Copyright (c) 2020 Boris Iwanski
+#region ================== Copyright (c) 2020 Boris Iwanski
 
 /*
  * This program is free software: you can redistribute it and/or modify
@@ -101,6 +101,11 @@ namespace CodeImp.DoomBuilder.UDBScript
 		private string editorexepath;
 		private PreferencesForm preferencesform;
 		private ScriptRunnerForm scriptrunnerform;
+		// OASIS STAR API
+		private ToolStripMenuItem menuStar;
+		private ToolStripButton buttonStar;
+		private OASISStarPanel starPanel;
+		private Docker starDocker;
 
 		#endregion
 
@@ -151,6 +156,76 @@ namespace CodeImp.DoomBuilder.UDBScript
 			scriptrunnerform = new ScriptRunnerForm();
 
 			FindEditor();
+
+			// OASIS STAR API: menu, toolbar button, and panel (wrapped so a failure here doesn't break the editor)
+			try
+			{
+				// Build shared menu items (used for both top-level ★ STAR and Tools → OASIS STAR)
+				var placeItem = new ToolStripMenuItem("Place ODOOM / OQUAKE asset at cursor...");
+				placeItem.Tag = "oasisstar_place_selected";
+				placeItem.Click += (s, e) => General.Interface.InvokeTaggedAction(s, e);
+				var showPanelItem = new ToolStripMenuItem("Open OASIS STAR panel");
+				showPanelItem.Tag = "oasisstar_show_panel";
+				showPanelItem.Click += (s, e) => General.Interface.InvokeTaggedAction(s, e);
+				var convQ2D = new ToolStripMenuItem("Convert OQUAKE .map → ODOOM...");
+				convQ2D.Tag = "oasisstar_convert_quake2doom";
+				convQ2D.Click += (s, e) => General.Interface.InvokeTaggedAction(s, e);
+				var convD2Q = new ToolStripMenuItem("Convert ODOOM map → OQUAKE .map...");
+				convD2Q.Tag = "oasisstar_convert_doom2quake";
+				convD2Q.Click += (s, e) => General.Interface.InvokeTaggedAction(s, e);
+
+				// Top-level menu (★ STAR) in main menu bar before Tools
+				menuStar = new ToolStripMenuItem("★ STAR");
+				menuStar.Name = "menuStar";
+				menuStar.DropDownItems.Add(placeItem);
+				menuStar.DropDownItems.Add(showPanelItem);
+				menuStar.DropDownItems.Add(new ToolStripSeparator());
+				menuStar.DropDownItems.Add(convQ2D);
+				menuStar.DropDownItems.Add(convD2Q);
+				General.Interface.AddMenu(menuStar, CodeImp.DoomBuilder.Windows.MenuSection.Top);
+
+				// Also under Tools: Tools → OASIS STAR
+				var menuStarUnderTools = new ToolStripMenuItem("OASIS STAR");
+				menuStarUnderTools.DropDownItems.Add(new ToolStripMenuItem("Place ODOOM / OQUAKE asset at cursor...") { Tag = "oasisstar_place_selected" });
+				menuStarUnderTools.DropDownItems.Add(new ToolStripMenuItem("Open OASIS STAR panel") { Tag = "oasisstar_show_panel" });
+				menuStarUnderTools.DropDownItems.Add(new ToolStripSeparator());
+				menuStarUnderTools.DropDownItems.Add(new ToolStripMenuItem("Convert OQUAKE .map → ODOOM...") { Tag = "oasisstar_convert_quake2doom" });
+				menuStarUnderTools.DropDownItems.Add(new ToolStripMenuItem("Convert ODOOM map → OQUAKE .map...") { Tag = "oasisstar_convert_doom2quake" });
+				foreach (ToolStripItem i in menuStarUnderTools.DropDownItems)
+					if (i is ToolStripMenuItem mi && mi.Tag != null) mi.Click += (s, e) => General.Interface.InvokeTaggedAction(s, e);
+				General.Interface.AddMenu(menuStarUnderTools, CodeImp.DoomBuilder.Windows.MenuSection.ToolsTesting);
+
+				// Also under View: View → OASIS STAR (always visible)
+				var menuStarUnderView = new ToolStripMenuItem("OASIS STAR");
+				menuStarUnderView.DropDownItems.Add(new ToolStripMenuItem("Place ODOOM / OQUAKE asset at cursor...") { Tag = "oasisstar_place_selected" });
+				menuStarUnderView.DropDownItems.Add(new ToolStripMenuItem("Open OASIS STAR panel") { Tag = "oasisstar_show_panel" });
+				menuStarUnderView.DropDownItems.Add(new ToolStripSeparator());
+				menuStarUnderView.DropDownItems.Add(new ToolStripMenuItem("Convert OQUAKE .map → ODOOM...") { Tag = "oasisstar_convert_quake2doom" });
+				menuStarUnderView.DropDownItems.Add(new ToolStripMenuItem("Convert ODOOM map → OQUAKE .map...") { Tag = "oasisstar_convert_doom2quake" });
+				foreach (ToolStripItem i in menuStarUnderView.DropDownItems)
+					if (i is ToolStripMenuItem mi && mi.Tag != null) mi.Click += (s, e) => General.Interface.InvokeTaggedAction(s, e);
+				General.Interface.AddMenu(menuStarUnderView, CodeImp.DoomBuilder.Windows.MenuSection.ViewScriptEdit);
+
+				// Toolbar: File section (next to New/Open/Save – visible when File toolbar is on)
+				buttonStar = new ToolStripButton();
+				buttonStar.DisplayStyle = ToolStripItemDisplayStyle.Text;
+				buttonStar.Text = "★";
+				buttonStar.ToolTipText = "OASIS STAR – Place assets from ODOOM/OQUAKE";
+				buttonStar.Tag = "oasisstar_place_selected";
+				buttonStar.Click += (s, e) => General.Interface.InvokeTaggedAction(s, e);
+				General.Interface.AddButton(buttonStar, CodeImp.DoomBuilder.Windows.ToolbarSection.File);
+
+				General.WriteLogLine("OASIS STAR: Menu and toolbar added. Look for: ★ STAR (menu bar), View → OASIS STAR, Tools → OASIS STAR, ★ button on File toolbar.");
+			}
+			catch (Exception ex)
+			{
+				General.ErrorLogger.Add(CodeImp.DoomBuilder.Errors.ErrorType.Error, "OASIS STAR init failed: " + ex.Message);
+				General.WriteLogLine("OASIS STAR init: " + ex.ToString());
+				menuStar = null;
+				buttonStar = null;
+				starPanel = null;
+				starDocker = null;
+			}
 		}
 
 		public override void OnMapNewEnd()
@@ -215,6 +290,20 @@ namespace CodeImp.DoomBuilder.UDBScript
 		// This is called when the plugin is terminated
 		public override void Dispose()
 		{
+			try
+			{
+				if (menuStar != null) General.Interface.RemoveMenu(menuStar);
+				if (buttonStar != null) General.Interface.RemoveButton(buttonStar);
+				if (starDocker != null) General.Interface.RemoveDocker(starDocker);
+			}
+			catch (Exception ex)
+			{
+				General.WriteLogLine("OASIS STAR dispose: " + ex.Message);
+			}
+			menuStar = null;
+			buttonStar = null;
+			starPanel = null;
+			starDocker = null;
 			base.Dispose();
 
 			// This must be called to remove bound methods for actions.
@@ -444,6 +533,50 @@ namespace CodeImp.DoomBuilder.UDBScript
 		}
 
 		/// <summary>
+		/// Runs a script by its path relative to the Scripts folder (e.g. "OASIS\\OASIS_STAR_Place_Selected.js").
+		/// Used by OASIS STAR toolbar/menu to place assets at cursor.
+		/// </summary>
+		/// <param name="relativePath">Path relative to UDBScript/Scripts (e.g. "OASIS\\OASIS_STAR_Place_Selected.js")</param>
+		/// <returns>True if the script was found and run, false otherwise</returns>
+		public bool RunScriptByPath(string relativePath)
+		{
+			if (string.IsNullOrWhiteSpace(relativePath))
+				return false;
+			string scriptsPath = Path.Combine(General.AppPath, SCRIPT_FOLDER, "Scripts");
+			string fullPath = Path.Combine(scriptsPath, relativePath.TrimStart('\\', '/'));
+			fullPath = Path.GetFullPath(fullPath);
+			if (!fullPath.StartsWith(Path.GetFullPath(scriptsPath), StringComparison.OrdinalIgnoreCase))
+				return false;
+			foreach (ScriptInfo si in scriptinfo)
+			{
+				if (string.Equals(si.ScriptFile, fullPath, StringComparison.OrdinalIgnoreCase))
+				{
+					scriptrunner = new ScriptRunner(si);
+					scriptrunnerform.ShowDialog();
+					return true;
+				}
+			}
+			// Script not in loaded list (e.g. OASIS folder not present); try loading from file
+			if (File.Exists(fullPath))
+			{
+				try
+				{
+					ScriptInfo si = new ScriptInfo(fullPath);
+					scriptrunner = new ScriptRunner(si);
+					scriptrunnerform.ShowDialog();
+					return true;
+				}
+				catch (Exception ex)
+				{
+					General.ErrorLogger.Add(CodeImp.DoomBuilder.Errors.ErrorType.Error, "OASIS STAR: Could not run script: " + ex.Message);
+					return false;
+				}
+			}
+			General.Interface.DisplayStatus(CodeImp.DoomBuilder.Windows.StatusType.Warning, "OASIS STAR: Script not found. Add OASIS scripts to UDBScript/Scripts/OASIS.");
+			return false;
+		}
+
+		/// <summary>
 		/// Gets the name of the script file. This is either read from the .cfg file of the script or taken from the file name
 		/// </summary>
 		/// <param name="filename">Full path with file name of the script</param>
@@ -620,6 +753,49 @@ namespace CodeImp.DoomBuilder.UDBScript
 		}
 
 		#region ================== Actions
+
+		#region OASIS STAR Actions
+
+		[BeginAction("oasisstar_place_selected")]
+		public void OASISStarPlaceSelected()
+		{
+			if (General.Map == null) return;
+			RunScriptByPath(Path.Combine("OASIS", "OASIS_STAR_Place_Selected.js"));
+		}
+
+		[BeginAction("oasisstar_show_panel")]
+		public void OASISStarShowPanel()
+		{
+			if (starDocker == null)
+			{
+				try
+				{
+					starPanel = new OASISStarPanel(this);
+					starDocker = new Docker("oasisstar", "OASIS STAR", starPanel);
+					General.Interface.AddDocker(starDocker);
+				}
+				catch (Exception ex)
+				{
+					General.ErrorLogger.Add(CodeImp.DoomBuilder.Errors.ErrorType.Error, "OASIS STAR panel: " + ex.Message);
+					return;
+				}
+			}
+			General.Interface.SelectDocker(starDocker);
+		}
+
+		[BeginAction("oasisstar_convert_quake2doom")]
+		public void OASISStarConvertQuake2Doom()
+		{
+			OASISMapConverter.ConvertQuakeToDoom(General.Interface);
+		}
+
+		[BeginAction("oasisstar_convert_doom2quake")]
+		public void OASISStarConvertDoom2Quake()
+		{
+			OASISMapConverter.ConvertDoomToQuake(General.Interface);
+		}
+
+		#endregion
 
 		[BeginAction("udbscriptexecute")]
 		public void ScriptExecute()

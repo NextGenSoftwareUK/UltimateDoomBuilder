@@ -1,4 +1,4 @@
-﻿#region ================== Namespaces
+#region ================== Namespaces
 
 using System;
 using System.Collections.Generic;
@@ -224,7 +224,7 @@ namespace CodeImp.DoomBuilder.BuilderModes.IO
 			//create mtl
 			StringBuilder mtl = new StringBuilder();
 			mtl.Append("# MTL for " + General.Map.FileTitle + ", map " + General.Map.Options.LevelName + Environment.NewLine);
-			mtl.Append("# Created by Ultimate Doom Builder " + Application.ProductVersion + Environment.NewLine + Environment.NewLine);
+			mtl.Append("# Created by ODOOM Editor By NextGen World Ltd " + Application.ProductVersion + Environment.NewLine + Environment.NewLine);
 
 			if(settings.Textures != null) 
 			{
@@ -474,7 +474,7 @@ namespace CodeImp.DoomBuilder.BuilderModes.IO
 
 			//add header
 			obj.Insert(0, "o " + General.Map.Options.LevelName + Environment.NewLine); //name
-			obj.Insert(0, "# Created by Ultimate Doom Builder " + Application.ProductVersion + Environment.NewLine + Environment.NewLine);
+			obj.Insert(0, "# Created by ODOOM Editor By NextGen World Ltd " + Application.ProductVersion + Environment.NewLine + Environment.NewLine);
 			obj.Insert(0, "# " + General.Map.FileTitle + ", map " + General.Map.Options.LevelName + Environment.NewLine);
 			data.Obj = obj.ToString();
 

@@ -1,0 +1,33 @@
+BuilderNative.dll – Required for map rendering
+==============================================
+
+When you open a map, ODOOM Editor By NextGen World Ltd loads BuilderNative.dll to create the OpenGL render device. If you see:
+
+  System.DllNotFoundException: Unable to load DLL 'BuilderNative': The specified module could not be found.
+
+then BuilderNative.dll is missing or not next to Builder.exe.
+
+Why the Build folder was empty
+------------------------------
+The Builder project used to run a "CleanOutputDirectory" step before every build that deleted
+the entire Build\ folder. That wiped BuilderNative.dll (and everything else) before copying
+the new Builder output, so after a build the folder could be empty or missing the DLL.
+That pre-build clean has been removed so Build\ is no longer wiped; BuilderNative.dll and
+Builder.exe now both stay in Build\ after a full build.
+
+Fix:
+-----
+1. Build the full solution (Build → Build Solution), or build the Builder project.
+   Builder depends on BuilderNative, so BuilderNative is built first and outputs to Build\,
+   then Builder outputs to Build\. Both Builder.exe and BuilderNative.dll end up in Build\.
+
+2. Use the same configuration and platform for both (e.g. Release | x64 for both).
+
+3. Run Builder.exe from the Build\ folder (e.g. C:\Source\UltimateDoomBuilder\Build\). When you press F5 in
+   Visual Studio, it runs from that folder (the project's output path).
+
+4. If you use a build script, build the solution or at least Builder + BuilderNative.
+   BuilderNative is Source\Native\BuilderNative.vcxproj (needs C++ workload in VS).
+
+Architecture: Builder.exe (x64) requires BuilderNative.dll (x64). Win32 requires the Win32 DLL.
+
