@@ -98,3 +98,4 @@ UDB.log("OASIS STAR: Now click on the map where you want to place " + row[3] + "
 
 
 
+

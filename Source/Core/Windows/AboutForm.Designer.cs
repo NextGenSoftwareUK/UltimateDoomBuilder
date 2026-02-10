@@ -237,7 +237,7 @@ namespace CodeImp.DoomBuilder.Windows
             this.label2.TabIndex = 17;
             this.label2.Text = "ODOOM Editor By NextGen World Ltd is a fork of Ultimate Doom Builder. Thanks to t" +
     "he Ultimate Doom Builder team for their great work.\r\n\r\nODOOM Editor contributors" +
-    ":\r\n • David Ellams\r\n\r\n";
+    ":\r\n ï¿½ David Ellams\r\n\r\n";
             this.label2.Click += new System.EventHandler(this.label2_Click);
             // 
             // tabPage3

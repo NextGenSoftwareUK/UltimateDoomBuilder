@@ -361,13 +361,12 @@ namespace CodeImp.DoomBuilder.UDBScript.Wrapper
 
 		/// <summary>
 		/// OASIS STAR: Set pending placement. After the script ends, the next left-click on the map will place a thing of the given type.
+		/// Exposed as a delegate so Jint can invoke it from script (UDB.setPendingStarPlacement(thingType, assetName)).
 		/// </summary>
-		/// <param name="thingType">Doom thing type to place</param>
-		/// <param name="assetName">Display name for status messages</param>
-		public void setPendingStarPlacement(int thingType, string assetName)
+		public Action<int, string> setPendingStarPlacement => (thingType, assetName) =>
 		{
 			BuilderPlug.Me.SetPendingStarPlacement(thingType, assetName ?? "asset");
-		}
+		};
 
 		#endregion
 	}
