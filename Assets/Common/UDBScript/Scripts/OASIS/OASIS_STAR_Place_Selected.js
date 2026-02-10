@@ -4,7 +4,7 @@
 
 `#name OASIS STAR - Place selected asset at cursor`;
 
-`#description Place any ODOOM or OQUAKE asset at mouse (keycards, monsters, weapons, health, ammo). Choose game and asset from the dialog. OQUAKE assets are placed as their Doom-equivalent thing for use in ODOOM maps.`;
+`#description Select the asset from the list, click OK, then click on the map where you want to place it. OQUAKE assets use Doom-equivalent thing types (editor shows Doom sprites).`;
 
 // Build flat list: "ODOOM|category|id|name" -> doomThingType
 // OQUAKE keys use cross-mapping; other OQUAKE use doom equivalent below
@@ -81,21 +81,20 @@ var ASSETS = [
 
 var choiceList = ASSETS.map(function(a) { return a[0] + " – " + a[3]; });
 var q = new UDB.QueryOptions();
-q.addOption("asset", "Asset to place", 0, choiceList[0], choiceList);
+q.addOption("asset", "Asset to place", 11, choiceList[0], choiceList);
 if (!q.query()) return;
-var idx = choiceList.indexOf(q.options.asset);
+var idx = -1;
+if (typeof q.options.asset === 'number' && q.options.asset >= 0 && q.options.asset < choiceList.length) {
+    idx = q.options.asset;
+} else {
+    idx = choiceList.indexOf(q.options.asset);
+}
 if (idx < 0) { UDB.log("OASIS STAR: Invalid selection."); return; }
 var row = ASSETS[idx];
 var doomType = row[4];
-var pos = UDB.Map.mousePosition;
-if (!pos) { UDB.log("OASIS STAR: Click in map view first, then run this script again."); return; }
-var t = UDB.Map.createThing(pos, doomType);
-if (UDB.Map.isUDMF) {
-    t.flags.skill1 = t.flags.skill2 = t.flags.skill3 = t.flags.skill4 = t.flags.skill5 = true;
-} else {
-    t.flags['1'] = t.flags['2'] = t.flags['4'] = true;
-}
-UDB.log("OASIS STAR: Placed " + row[3] + " (type " + doomType + ") at cursor.");
+// Tell the plugin to place this thing on the next map click
+UDB.setPendingStarPlacement(doomType, row[3]);
+UDB.log("OASIS STAR: Now click on the map where you want to place " + row[3] + ".");
 
 
 

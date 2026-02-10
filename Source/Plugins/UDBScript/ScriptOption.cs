@@ -1,4 +1,4 @@
-﻿#region ================== Copyright (c) 2020 Boris Iwanski
+#region ================== Copyright (c) 2020 Boris Iwanski
 
 /*
  * This program is free software: you can redistribute it and/or modify
@@ -87,12 +87,18 @@ namespace CodeImp.DoomBuilder.UDBScript
 			this.type = type;
 			this.enumvalues = enumvalues;
 
-			// If it's an enum try to get the default value from default value number
+			// If it's an enum try to get the default value from default value number or display string
 			if(enumvalues != null && enumvalues.Count > 0)
 			{
 				foreach (DictionaryEntry de in enumvalues)
 				{
-					if(de.Key.ToString() == defaultvalue.ToString())
+					if(de.Key.ToString() == defaultvalue?.ToString())
+					{
+						this.defaultvalue = value = de.Value;
+						break;
+					}
+					// Match by display string (e.g. when QueryOptions passes an array: keys are "0","1", values are display text)
+					if(de.Value != null && de.Value.ToString() == defaultvalue?.ToString())
 					{
 						this.defaultvalue = value = de.Value;
 						break;

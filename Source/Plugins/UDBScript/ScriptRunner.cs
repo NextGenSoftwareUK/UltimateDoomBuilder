@@ -1,4 +1,4 @@
-﻿#region ================== Copyright (c) 2020 Boris Iwanski
+#region ================== Copyright (c) 2020 Boris Iwanski
 
 /*
  * This program is free software: you can redistribute it and/or modify
@@ -423,7 +423,7 @@ namespace CodeImp.DoomBuilder.UDBScript
 			// Do some updates
 			General.Map.Map.Update();
 			General.Map.ThingsFilter.Update();
-			//General.Interface.RedrawDisplay();
+			General.Interface.RedrawDisplay();
 
 			// Tell the mode that running the script ended
 			General.Editing.Mode.OnScriptRunEnd();

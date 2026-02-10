@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.Dynamic;
@@ -292,16 +292,17 @@ namespace CodeImp.DoomBuilder.UDBScript
 			{
 				newvalue = so.defaultvalue;
 				parametersview.CellValueChanged -= parametersview_CellValueChanged;
-				parametersview.Rows[e.RowIndex].Cells["Value"].Value = newvalue.ToString();
+				parametersview.Rows[e.RowIndex].Cells["Value"].Value = newvalue != null ? newvalue.ToString() : string.Empty;
 				parametersview.CellValueChanged += parametersview_CellValueChanged;
 			}
 
-			so.typehandler.SetValue(newvalue);
+			if (so.typehandler != null)
+				so.typehandler.SetValue(newvalue);
 
 			so.value = newvalue;
 
 			// Make the text lighter if it's the default value, and store the setting in the config file if it's not the default
-			if (so.value.ToString() == so.defaultvalue.ToString())
+			if (so != null && so.defaultvalue != null && so.value != null && so.value.ToString() == so.defaultvalue.ToString())
 			{
 				parametersview.Rows[e.RowIndex].Cells["Value"].Style.ForeColor = SystemColors.GrayText;
 			}

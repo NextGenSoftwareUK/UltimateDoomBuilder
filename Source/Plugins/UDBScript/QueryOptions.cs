@@ -1,4 +1,4 @@
-﻿#region ================== Copyright (c) 2020 Boris Iwanski
+#region ================== Copyright (c) 2020 Boris Iwanski
 
 /*
  * This program is free software: you can redistribute it and/or modify
@@ -24,9 +24,11 @@
 #region ================== Namespaces
 
 using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.Dynamic;
 using System.Windows.Forms;
+using CodeImp.DoomBuilder.Types;
 
 #endregion
 
@@ -132,6 +134,19 @@ namespace CodeImp.DoomBuilder.UDBScript
 				}
 
 				form.AddOption(name, description, type, defaultvalue, values);
+			}
+			else if (enumvalues is IEnumerable en && !(enumvalues is IDictionary))
+			{
+				// Script passed an array (e.g. from JavaScript) – use as dropdown (EnumOption)
+				var values = new Dictionary<string, object>();
+				int i = 0;
+				foreach (object item in en)
+				{
+					values[i.ToString()] = item ?? string.Empty;
+					i++;
+				}
+				int enumType = (int)UniversalType.EnumOption;
+				form.AddOption(name, description, enumType, defaultvalue, values);
 			}
 		}
 

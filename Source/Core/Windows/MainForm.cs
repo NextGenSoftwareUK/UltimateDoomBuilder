@@ -433,7 +433,7 @@ namespace CodeImp.DoomBuilder.Windows
 		//mxd
 		private void UpdateTitle()
 		{
-			string programname = this.Text = Application.ProductName + " R" + General.ThisAssembly.GetName().Version.Revision;
+			string programname = this.Text = Application.ProductName + " v" + Application.ProductVersion + " By NextGen World Ltd";
             if (Environment.Is64BitProcess)
                 programname += " (64-bit)";
             else programname += " (32-bit)";
@@ -2242,7 +2242,7 @@ namespace CodeImp.DoomBuilder.Windows
 					case ToolbarSection.Things: p.button.Visible = General.Settings.ToolbarFilter; break;
 					case ToolbarSection.Views: p.button.Visible = General.Settings.ToolbarViewModes; break;
 					case ToolbarSection.Geometry: p.button.Visible = General.Settings.ToolbarGeometry; break;
-					case ToolbarSection.Testing: p.button.Visible = General.Settings.ToolbarTesting; break;
+					case ToolbarSection.Testing: p.button.Visible = General.Settings.ToolbarTesting && maploaded; break;
 				}
 
 				// Update the tooltips of all buttons added by plugins

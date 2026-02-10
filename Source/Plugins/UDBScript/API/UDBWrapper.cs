@@ -1,4 +1,4 @@
-﻿#region ================== Copyright (c) 2022 Boris Iwanski
+#region ================== Copyright (c) 2022 Boris Iwanski
 
 /*
  * This program is free software: you can redistribute it and/or modify
@@ -357,6 +357,16 @@ namespace CodeImp.DoomBuilder.UDBScript.Wrapper
 				throw new DieScriptException();
 
 			throw new DieScriptException(s);
+		}
+
+		/// <summary>
+		/// OASIS STAR: Set pending placement. After the script ends, the next left-click on the map will place a thing of the given type.
+		/// </summary>
+		/// <param name="thingType">Doom thing type to place</param>
+		/// <param name="assetName">Display name for status messages</param>
+		public void setPendingStarPlacement(int thingType, string assetName)
+		{
+			BuilderPlug.Me.SetPendingStarPlacement(thingType, assetName ?? "asset");
 		}
 
 		#endregion
