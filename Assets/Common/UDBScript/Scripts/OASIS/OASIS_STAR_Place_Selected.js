@@ -4,10 +4,10 @@
 
 `#name OASIS STAR - Place selected asset at cursor`;
 
-`#description Select the asset from the list, click OK, then click on the map where you want to place it. OQUAKE assets use Doom-equivalent thing types (editor shows Doom sprites).`;
+`#description Select the asset from the list, click OK, then click on the map where you want to place it. OASIS STAR: same keys/items work in Doom and OQuake (collect in one, use in the other).`;
 
 // Build flat list: "ODOOM|category|id|name" -> doomThingType
-// OQUAKE keys use cross-mapping; other OQUAKE use doom equivalent below
+// OASIS thing types: same in Doom and OQuake (interop)
 var ASSETS = [
     ["ODOOM", "key", "blue_keycard", "Blue Keycard", 5],
     ["ODOOM", "key", "red_keycard", "Red Keycard", 13],
@@ -49,34 +49,34 @@ var ASSETS = [
     ["ODOOM", "monster", "arachnotron", "Arachnotron", 67],
     ["ODOOM", "monster", "spider_mastermind", "Spider Mastermind", 7],
     ["ODOOM", "monster", "cyberdemon", "Cyberdemon", 16],
-    ["OQUAKE", "key", "silver_key", "Silver Key (→Red)", 13],
-    ["OQUAKE", "key", "gold_key", "Gold Key (→Blue)", 5],
-    ["OQUAKE", "weapon", "shotgun", "Shotgun (→Doom)", 2001],
-    ["OQUAKE", "weapon", "supershotgun", "Super Shotgun (→Doom)", 2001],
-    ["OQUAKE", "weapon", "nailgun", "Nailgun (→Doom)", 2002],
-    ["OQUAKE", "weapon", "supernailgun", "Super Nailgun (→Doom)", 2002],
-    ["OQUAKE", "weapon", "grenadelauncher", "Grenade Launcher (→Doom)", 2003],
-    ["OQUAKE", "weapon", "rocketlauncher", "Rocket Launcher (→Doom)", 2003],
-    ["OQUAKE", "weapon", "lightning", "Thunderbolt (→Doom)", 2004],
-    ["OQUAKE", "ammo", "shells", "Shells (→Doom)", 2008],
-    ["OQUAKE", "ammo", "spikes", "Nails (→Doom)", 2007],
-    ["OQUAKE", "ammo", "rockets", "Rockets (→Doom)", 2010],
-    ["OQUAKE", "ammo", "cells", "Cells (→Doom)", 2047],
-    ["OQUAKE", "health", "health", "Health (→Doom)", 2011],
-    ["OQUAKE", "health", "health_small", "Small Health (→Doom)", 2012],
-    ["OQUAKE", "health", "armor1", "Green Armor (→Doom)", 2015],
-    ["OQUAKE", "health", "armor2", "Yellow Armor (→Doom)", 2016],
-    ["OQUAKE", "health", "armorInv", "Mega Armor (→Doom)", 2013],
-    ["OQUAKE", "monster", "grunt", "Grunt (→Doom)", 3004],
-    ["OQUAKE", "monster", "ogre", "Ogre (→Doom)", 9],
-    ["OQUAKE", "monster", "demon", "Demon (→Doom)", 3002],
-    ["OQUAKE", "monster", "dog", "Rottweiler (→Doom)", 3002],
-    ["OQUAKE", "monster", "shambler", "Shambler (→Doom)", 3003],
-    ["OQUAKE", "monster", "zombie", "Zombie (→Doom)", 3004],
-    ["OQUAKE", "monster", "hell_knight", "Hell Knight (→Doom)", 69],
-    ["OQUAKE", "monster", "enforcer", "Enforcer (→Doom)", 66],
-    ["OQUAKE", "monster", "fish", "Fish (→Doom)", 3005],
-    ["OQUAKE", "monster", "spawn", "Spawn (→Doom)", 68]
+    ["OQUAKE", "key", "silver_key", "Silver Key", 13],
+    ["OQUAKE", "key", "gold_key", "Gold Key", 5],
+    ["OQUAKE", "weapon", "shotgun", "Shotgun", 2001],
+    ["OQUAKE", "weapon", "supershotgun", "Super Shotgun", 2001],
+    ["OQUAKE", "weapon", "nailgun", "Nailgun", 2002],
+    ["OQUAKE", "weapon", "supernailgun", "Super Nailgun", 2002],
+    ["OQUAKE", "weapon", "grenadelauncher", "Grenade Launcher", 2003],
+    ["OQUAKE", "weapon", "rocketlauncher", "Rocket Launcher", 2003],
+    ["OQUAKE", "weapon", "lightning", "Thunderbolt", 2004],
+    ["OQUAKE", "ammo", "shells", "Shells", 2008],
+    ["OQUAKE", "ammo", "spikes", "Nails", 2007],
+    ["OQUAKE", "ammo", "rockets", "Rockets", 2010],
+    ["OQUAKE", "ammo", "cells", "Cells", 2047],
+    ["OQUAKE", "health", "health", "Health", 2011],
+    ["OQUAKE", "health", "health_small", "Small Health", 2012],
+    ["OQUAKE", "health", "armor1", "Green Armor", 2015],
+    ["OQUAKE", "health", "armor2", "Yellow Armor", 2016],
+    ["OQUAKE", "health", "armorInv", "Mega Armor", 2013],
+    ["OQUAKE", "monster", "grunt", "Grunt", 3004],
+    ["OQUAKE", "monster", "ogre", "Ogre", 9],
+    ["OQUAKE", "monster", "demon", "Demon", 3002],
+    ["OQUAKE", "monster", "dog", "Rottweiler", 3010],
+    ["OQUAKE", "monster", "shambler", "Shambler", 3003],
+    ["OQUAKE", "monster", "zombie", "Zombie", 3011],
+    ["OQUAKE", "monster", "hell_knight", "Hell Knight", 69],
+    ["OQUAKE", "monster", "enforcer", "Enforcer", 66],
+    ["OQUAKE", "monster", "fish", "Fish", 3005],
+    ["OQUAKE", "monster", "spawn", "Spawn", 68]
 ];
 
 var choiceList = ASSETS.map(function(a) { return a[0] + " – " + a[3]; });

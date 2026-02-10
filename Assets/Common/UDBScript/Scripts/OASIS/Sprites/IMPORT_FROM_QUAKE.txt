@@ -1,0 +1,10 @@
+To use real Quake 1 sprites for OQUAKE assets in the editor:
+1. Get Quake 1 game data (id1 folder with pak0.pak), e.g. from Steam or GOG.
+2. Build the ExtractOquakeSprites tool (in UDB Source\Tools\ExtractOquakeSprites).
+3. Run:
+     ExtractOquakeSprites.exe "C:\path\to\your\id1" "C:\path\to\this\Sprites\folder"
+   Example if id1 is in vkQuake:
+     ExtractOquakeSprites.exe "C:\Source\vkQuake\id1" "C:\Source\UltimateDoomBuilder\Assets\Common\UDBScript\Scripts\OASIS\Sprites"
+4. Restart UDB or reload the map; thing types with a PNG here will show the Quake sprite.
+
+If you don't have pak0.pak, you can still add PNGs manually (name them by Doom thing type: 5.png, 13.png, 2001.png, etc.).

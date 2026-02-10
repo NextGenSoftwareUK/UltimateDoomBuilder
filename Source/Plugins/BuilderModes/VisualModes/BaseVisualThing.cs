@@ -76,11 +76,19 @@ namespace CodeImp.DoomBuilder.BuilderModes
 			//mxd. When true, the thing can be moved below floor/above ceiling
 			nointeraction = (info.Actor != null && info.Actor.GetFlagValue("nointeraction", false));
 
-			//mxd. Find sprite textures
+			//mxd. Find sprite textures (or use plugin override e.g. OQUAKE display pack)
+			ImageData overrideSprite = General.Plugins.GetThingSpriteOverride(Thing.Type);
 			sprites = new ImageData[info.SpriteFrame.Length];
-			for(int i = 0; i < info.SpriteFrame.Length; i++)
+			if(overrideSprite != null)
 			{
-				sprites[i] = General.Map.Data.GetSpriteImage(info.SpriteFrame[i].Sprite);
+				for(int i = 0; i < sprites.Length; i++) sprites[i] = overrideSprite;
+			}
+			else
+			{
+				for(int i = 0; i < info.SpriteFrame.Length; i++)
+				{
+					sprites[i] = General.Map.Data.GetSpriteImage(info.SpriteFrame[i].Sprite);
+				}
 			}
 
 			//mxd
@@ -511,11 +519,19 @@ namespace CodeImp.DoomBuilder.BuilderModes
 			//mxd. When true, the thing can be moved below floor/above ceiling
 			nointeraction = (info.Actor != null && info.Actor.GetFlagValue("nointeraction", false));
 
-			//mxd. Find sprite textures
+			//mxd. Find sprite textures (or use plugin override e.g. OQUAKE display pack)
+			ImageData overrideSprite = General.Plugins.GetThingSpriteOverride(Thing.Type);
 			sprites = new ImageData[info.SpriteFrame.Length];
-			for(int i = 0; i < info.SpriteFrame.Length; i++)
+			if(overrideSprite != null)
 			{
-				sprites[i] = General.Map.Data.GetSpriteImage(info.SpriteFrame[i].Sprite);
+				for(int i = 0; i < sprites.Length; i++) sprites[i] = overrideSprite;
+			}
+			else
+			{
+				for(int i = 0; i < info.SpriteFrame.Length; i++)
+				{
+					sprites[i] = General.Map.Data.GetSpriteImage(info.SpriteFrame[i].Sprite);
+				}
 			}
 			
 			// Setup visual thing

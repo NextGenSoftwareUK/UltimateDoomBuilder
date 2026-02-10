@@ -26,17 +26,19 @@
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Drawing;
 using System.Dynamic;
-using System.Windows.Forms;
 using System.IO;
 using System.Linq;
 using System.Numerics;
+using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
-using System.Text.RegularExpressions;
+using System.Windows.Forms;
 using CodeImp.DoomBuilder.Actions;
-using CodeImp.DoomBuilder.Controls;
 using CodeImp.DoomBuilder.BuilderModes;
+using CodeImp.DoomBuilder.Controls;
+using CodeImp.DoomBuilder.Data;
 using CodeImp.DoomBuilder.Editing;
 using CodeImp.DoomBuilder.Geometry;
 using CodeImp.DoomBuilder.IO;
@@ -76,6 +78,7 @@ namespace CodeImp.DoomBuilder.UDBScript
 		#region ================== Constants
 
 		private static readonly string SCRIPT_FOLDER = "UDBScript";
+		private static readonly string OASIS_SPRITES_FOLDER = "Sprites"; // UDBScript/Scripts/OASIS/Sprites (thing type PNGs)
 		public static readonly uint UDB_SCRIPT_VERSION = 5;
 
 		#endregion
@@ -114,6 +117,9 @@ namespace CodeImp.DoomBuilder.UDBScript
 		// Click-to-place: after user selects asset in STAR dialog, next map click places it
 		private int? pendingStarThingType;
 		private string pendingStarAssetName;
+		// OASIS display pack: optional PNGs per thing type for editor-only sprites (OQUAKE/ODOOM)
+		private readonly Dictionary<int, ImageData> thingSpriteOverrideCache = new Dictionary<int, ImageData>();
+		private readonly object thingSpriteOverrideLock = new object();
 
 		#endregion
 
@@ -887,6 +893,40 @@ namespace CodeImp.DoomBuilder.UDBScript
 		public void OASISStarConvertDoom2Quake()
 		{
 			OASISMapConverter.ConvertDoomToQuake(General.Interface);
+		}
+
+		/// <summary>
+		/// Optional sprite override for thing types (e.g. OQUAKE/ODOOM display pack). Returns ImageData from pack if present.
+		/// </summary>
+		public override ImageData GetThingSpriteOverride(int thingType)
+		{
+			lock (thingSpriteOverrideLock)
+			{
+				if (thingSpriteOverrideCache.TryGetValue(thingType, out ImageData cached))
+					return cached;
+			}
+			string packPath = Path.Combine(General.AppPath, SCRIPT_FOLDER, "Scripts", "OASIS", OASIS_SPRITES_FOLDER);
+			if (!Directory.Exists(packPath)) return null;
+			string pathByType = Path.Combine(packPath, thingType + ".png");
+			if (!File.Exists(pathByType)) return null;
+			try
+			{
+				using (Bitmap fromFile = (Bitmap)Image.FromFile(pathByType))
+				{
+					var bim = new BitmapImage(new Bitmap(fromFile), "OASIS_" + thingType);
+					bim.LoadImageNow();
+					lock (thingSpriteOverrideLock)
+					{
+						thingSpriteOverrideCache[thingType] = bim;
+					}
+					return bim;
+				}
+			}
+			catch (Exception ex)
+			{
+				General.ErrorLogger.Add(CodeImp.DoomBuilder.ErrorType.Error, "OASIS display pack: failed to load " + pathByType + ": " + ex.Message);
+				return null;
+			}
 		}
 
 		#endregion

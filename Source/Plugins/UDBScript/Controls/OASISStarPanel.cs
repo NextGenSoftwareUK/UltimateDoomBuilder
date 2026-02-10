@@ -2,7 +2,7 @@
 
 /*
  * OASIS STAR panel: select and place ODOOM/OQUAKE assets (keycards, monsters, weapons, health, ammo)
- * into maps. Cross-game: place OQUAKE assets in ODOOM maps (as Doom-equivalent things).
+ * into maps. Cross-game: same thing types in Doom and OQuake (e.g. Silver Key works in both).
  */
 
 #endregion
@@ -125,8 +125,8 @@ namespace CodeImp.DoomBuilder.UDBScript
 			}
 			else
 			{
-				listAssets.Items.Add("--- Keys (→ Doom equiv) ---");
-				listAssets.Items.Add("  Silver Key (→Red), Gold Key (→Blue)");
+				listAssets.Items.Add("--- Keys ---");
+				listAssets.Items.Add("  Silver Key, Gold Key");
 				listAssets.Items.Add("--- Weapons / Ammo / Health ---");
 				listAssets.Items.Add("  Shotgun, Nailgun, Rocket Launcher, ...");
 				listAssets.Items.Add("--- Monsters ---");

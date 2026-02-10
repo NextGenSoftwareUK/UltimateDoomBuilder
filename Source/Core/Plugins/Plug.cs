@@ -3,12 +3,13 @@
 using System;
 using System.IO;
 using System.Windows.Forms;
+using CodeImp.DoomBuilder.Config;
+using CodeImp.DoomBuilder.Data;
 using CodeImp.DoomBuilder.Editing;
 using CodeImp.DoomBuilder.Geometry;
-using CodeImp.DoomBuilder.Rendering;
 using CodeImp.DoomBuilder.Map;
+using CodeImp.DoomBuilder.Rendering;
 using CodeImp.DoomBuilder.Windows;
-using CodeImp.DoomBuilder.Config;
 
 #endregion
 
@@ -338,7 +339,15 @@ namespace CodeImp.DoomBuilder.Plugins
 		public virtual void OnHighlightVertex(Vertex v) { }
 		public virtual void OnHighlightRefreshed(object o) { }
 		public virtual void OnHighlightLost() { }
-		
+
+		/// <summary>
+		/// Optional override for the sprite image used when drawing a thing in the editor.
+		/// Return non-null to use a custom image (e.g. OQUAKE display pack) instead of the game config sprite.
+		/// </summary>
+		/// <param name="thingType">Doom thing type index</param>
+		/// <returns>ImageData to use when drawing, or null to use default</returns>
+		public virtual ImageData GetThingSpriteOverride(int thingType) { return null; }
+
 		#endregion
 	}
 }

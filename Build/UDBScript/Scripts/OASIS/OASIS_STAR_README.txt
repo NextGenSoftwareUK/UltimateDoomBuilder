@@ -19,7 +19,7 @@ What STAR does
 • Convert OQUAKE .map → Doom thing list.
 • Convert current ODOOM map → OQUAKE .map (point entities).
 
-Place asset: click in the 2D map, then use STAR → Place ODOOM/OQUAKE asset at cursor (or the ★ toolbar button). Choose the asset in the script dialog. OQUAKE assets are placed as their Doom-equivalent thing type for use in ODOOM maps.
+Place asset: click in the 2D map, then use STAR → Place ODOOM/OQUAKE asset at cursor (or the ★ toolbar button). Choose the asset in the script dialog. Same thing types work in both games (e.g. Silver Key in a Doom map opens Silver doors in OQuake).
 
 Next step: modify ODOOM and OQUAKE runtimes so cross-game assets work in-game (e.g. OQUAKE weapons in ODOOM).
 

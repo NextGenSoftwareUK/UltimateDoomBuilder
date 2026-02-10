@@ -21,6 +21,8 @@ using System.Collections;
 using System.Collections.Generic;
 using System.IO;
 using System.Windows.Forms;
+using CodeImp.DoomBuilder.Config;
+using CodeImp.DoomBuilder.Data;
 using CodeImp.DoomBuilder.Editing;
 using System.Reflection;
 using CodeImp.DoomBuilder.Geometry;
@@ -28,6 +30,7 @@ using CodeImp.DoomBuilder.Map;
 using CodeImp.DoomBuilder.Rendering;
 using CodeImp.DoomBuilder.Windows;
 using CodeImp.DoomBuilder.Config;
+using CodeImp.DoomBuilder.Data;
 using CodeImp.DoomBuilder.IO;
 using System.Collections.Specialized;
 
@@ -310,6 +313,19 @@ namespace CodeImp.DoomBuilder.Plugins
 		public void OnHighlightVertex(Vertex v) { foreach(Plugin p in plugins) p.Plug.OnHighlightVertex(v); }
 		public void OnHighlightRefreshed(object o) { foreach(Plugin p in plugins) p.Plug.OnHighlightRefreshed(o); }
 		public void OnHighlightLost() { foreach(Plugin p in plugins) p.Plug.OnHighlightLost(); }
+
+		/// <summary>
+		/// First plugin that returns a non-null ImageData for this thing type wins (used for OQUAKE/ODOOM display pack).
+		/// </summary>
+		public ImageData GetThingSpriteOverride(int thingType)
+		{
+			foreach (Plugin p in plugins)
+			{
+				ImageData img = p.Plug.GetThingSpriteOverride(thingType);
+				if (img != null) return img;
+			}
+			return null;
+		}
 		
 		#endregion
 	}
