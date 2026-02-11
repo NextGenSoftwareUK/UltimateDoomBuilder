@@ -20,3 +20,4 @@ THIS folder (or to Build\UDBScript\Scripts\OASIS\Sprites if that is where UDB
 loads from):
   ExtractOquakeSprites.exe "C:\path\to\id1" "C:\path\to\this\Sprites\folder"
 See IMPORT_FROM_QUAKE.txt in this folder.
+

@@ -76,6 +76,14 @@ namespace CodeImp.DoomBuilder.Controls
 			
 			// Lookup thing info
 			ThingTypeInfo ti = General.Map.Data.GetThingInfo(t.Type);
+			string displayTitle = ti.Title;
+			string displayClassName = ti.ClassName;
+			KeyValuePair<string, string> thingInfoOverride;
+			if(!ti.IsKnown && General.TryGetThingInfoOverride(t.Type, out thingInfoOverride))
+			{
+				displayTitle = thingInfoOverride.Key;
+				displayClassName = thingInfoOverride.Value;
+			}
 
 			// Get thing action information
 			LinedefActionInfo act;
@@ -102,13 +110,13 @@ namespace CodeImp.DoomBuilder.Controls
 
 			// Thing info
 			infopanel.Text = " Thing " + t.Index + " ";
-			type.Text = t.Type + " - " + ti.Title;
+			type.Text = t.Type + " - " + displayTitle;
 			if(ti.IsObsolete) type.Text += " - OBSOLETE"; //mxd
 			action.Text = actioninfo;
-			bool displayclassname = !string.IsNullOrEmpty(ti.ClassName) && !ti.ClassName.StartsWith("$"); //mxd
+			bool displayclassname = !string.IsNullOrEmpty(displayClassName) && !displayClassName.StartsWith("$"); //mxd
 			labelclass.Enabled = displayclassname; //mxd
 			classname.Enabled = displayclassname; //mxd
-			classname.Text = (displayclassname ? ti.ClassName : "--"); //mxd
+			classname.Text = (displayclassname ? displayClassName : "--"); //mxd
 			position.Text = t.Position.x.ToString(CultureInfo.InvariantCulture) + ", " + t.Position.y.ToString(CultureInfo.InvariantCulture) + ", " + zinfo;
 			tag.Text = t.Tag + (General.Map.Options.TagLabels.ContainsKey(t.Tag) ? " - " + General.Map.Options.TagLabels[t.Tag] : string.Empty);
 			angle.Text = t.AngleDoom + "\u00B0";
@@ -116,7 +124,13 @@ namespace CodeImp.DoomBuilder.Controls
 			anglecontrol.Left = angle.Right + 1;
 			
 			// Sprite
-			if(ti.Sprite.ToLowerInvariant().StartsWith(DataManager.INTERNAL_PREFIX) && (ti.Sprite.Length > DataManager.INTERNAL_PREFIX.Length))
+			ImageData overrideSprite = General.GetThingSpriteOverride(t.Type);
+			if(overrideSprite != null)
+			{
+				spritename.Text = "";
+				spritetex.Image = overrideSprite.GetPreview();
+			}
+			else if(ti.Sprite.ToLowerInvariant().StartsWith(DataManager.INTERNAL_PREFIX) && (ti.Sprite.Length > DataManager.INTERNAL_PREFIX.Length))
 			{
 				spritename.Text = "";
 				spritetex.Image = General.Map.Data.GetSpriteImage(ti.Sprite).GetSpritePreview();

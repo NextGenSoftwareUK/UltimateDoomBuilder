@@ -29,6 +29,7 @@ using System.Diagnostics;
 using System.Drawing;
 using System.Dynamic;
 using System.IO;
+using System.Reflection;
 using System.Linq;
 using System.Numerics;
 using System.Text.RegularExpressions;
@@ -79,6 +80,8 @@ namespace CodeImp.DoomBuilder.UDBScript
 
 		private static readonly string SCRIPT_FOLDER = "UDBScript";
 		private static readonly string OASIS_SPRITES_FOLDER = "Sprites"; // UDBScript/Scripts/OASIS/Sprites (thing type PNGs)
+		/// <summary>OQUAKE/OASIS unique thing types start at 5000; only these get display-pack overrides (avoid looking for 1.png etc.).</summary>
+		private const int OASIS_THING_TYPE_MIN = 5000;
 		public static readonly uint UDB_SCRIPT_VERSION = 5;
 
 		#endregion
@@ -120,6 +123,12 @@ namespace CodeImp.DoomBuilder.UDBScript
 		// OASIS display pack: optional PNGs per thing type for editor-only sprites (OQUAKE/ODOOM)
 		private readonly Dictionary<int, ImageData> thingSpriteOverrideCache = new Dictionary<int, ImageData>();
 		private readonly object thingSpriteOverrideLock = new object();
+		private static bool loggedOasisSpritePathWarning;
+		// OASIS STAR metadata: thing type -> (title, class/id), loaded from OASIS_STAR_Place_Selected.js
+		private readonly Dictionary<int, KeyValuePair<string, string>> thingInfoOverrideCache = new Dictionary<int, KeyValuePair<string, string>>();
+		private readonly object thingInfoOverrideLock = new object();
+		private bool thingInfoOverrideLoaded;
+		private static bool loggedOasisThingInfoPathWarning;
 
 		#endregion
 
@@ -914,18 +923,51 @@ namespace CodeImp.DoomBuilder.UDBScript
 		/// </summary>
 		public override ImageData GetThingSpriteOverride(int thingType)
 		{
+			// Only OASIS/OQUAKE types (5000+) have display-pack PNGs; skip lookup and warning for standard Doom things (e.g. type 1)
+			if (thingType < OASIS_THING_TYPE_MIN)
+				return null;
 			lock (thingSpriteOverrideLock)
 			{
 				if (thingSpriteOverrideCache.TryGetValue(thingType, out ImageData cached))
 					return cached;
 			}
 			string fileName = thingType + ".png";
-			string[] candidateDirs = new[]
+			var candidateDirs = new List<string>
 			{
 				Path.Combine(General.AppPath, SCRIPT_FOLDER, "Scripts", "OASIS", OASIS_SPRITES_FOLDER),
 				Path.Combine(General.AppPath, "Assets", "Common", SCRIPT_FOLDER, "Scripts", "OASIS", OASIS_SPRITES_FOLDER),
 				Path.Combine(General.AppPath, "..", "Assets", "Common", SCRIPT_FOLDER, "Scripts", "OASIS", OASIS_SPRITES_FOLDER),
 			};
+			// Also try relative to plugin DLL and to entry exe (VS can run from different output dirs)
+			try
+			{
+				string pluginDir = Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location);
+				if (!string.IsNullOrEmpty(pluginDir))
+				{
+					candidateDirs.Add(Path.Combine(pluginDir, "..", SCRIPT_FOLDER, "Scripts", "OASIS", OASIS_SPRITES_FOLDER));
+					candidateDirs.Add(Path.Combine(pluginDir, "..", "..", "Assets", "Common", SCRIPT_FOLDER, "Scripts", "OASIS", OASIS_SPRITES_FOLDER));
+					candidateDirs.Add(Path.Combine(pluginDir, "..", "..", "..", "..", "Assets", "Common", SCRIPT_FOLDER, "Scripts", "OASIS", OASIS_SPRITES_FOLDER));
+				}
+				Assembly entry = Assembly.GetEntryAssembly();
+				if (entry != null)
+				{
+					string entryDir = Path.GetDirectoryName(entry.Location);
+					if (!string.IsNullOrEmpty(entryDir))
+					{
+						candidateDirs.Add(Path.Combine(entryDir, SCRIPT_FOLDER, "Scripts", "OASIS", OASIS_SPRITES_FOLDER));
+						candidateDirs.Add(Path.Combine(entryDir, "Assets", "Common", SCRIPT_FOLDER, "Scripts", "OASIS", OASIS_SPRITES_FOLDER));
+						// Walk up from exe dir (e.g. bin\Debug\ -> bin\ -> solution root) to find Sprites
+						for (string walk = Path.GetDirectoryName(entryDir); !string.IsNullOrEmpty(walk) && walk != Path.GetPathRoot(walk); walk = Path.GetDirectoryName(walk))
+						{
+							string spritesUnderUdb = Path.Combine(walk, SCRIPT_FOLDER, "Scripts", "OASIS", OASIS_SPRITES_FOLDER);
+							if (!candidateDirs.Contains(spritesUnderUdb)) candidateDirs.Add(spritesUnderUdb);
+							string spritesUnderAssets = Path.Combine(walk, "Assets", "Common", SCRIPT_FOLDER, "Scripts", "OASIS", OASIS_SPRITES_FOLDER);
+							if (!candidateDirs.Contains(spritesUnderAssets)) candidateDirs.Add(spritesUnderAssets);
+						}
+					}
+				}
+			}
+			catch { /* ignore */ }
 			string pathByType = null;
 			foreach (string dir in candidateDirs)
 			{
@@ -940,18 +982,103 @@ namespace CodeImp.DoomBuilder.UDBScript
 					}
 				}
 			}
-			if (pathByType == null) return null;
+			if (pathByType == null)
+			{
+				// Log once so user sees why 3D shows "sprite unknown" (Tools → Errors & Warnings)
+				if (!loggedOasisSpritePathWarning)
+				{
+					loggedOasisSpritePathWarning = true;
+					string firstResolved = candidateDirs.Count > 0 ? Path.GetFullPath(candidateDirs[0]) : "(none)";
+					General.ErrorLogger.Add(CodeImp.DoomBuilder.ErrorType.Warning,
+						"OASIS display pack: " + fileName + " not found. AppPath=" + (General.AppPath ?? "") + "; first path tried: " + firstResolved + ". Copy Sprites folder to exe directory under UDBScript/Scripts/OASIS/Sprites or Assets/Common/UDBScript/Scripts/OASIS/Sprites.");
+				}
+				return null;
+			}
 			try
 			{
 				using (Bitmap fromFile = (Bitmap)Image.FromFile(pathByType))
 				{
-					var bim = new BitmapImage(new Bitmap(fromFile), "OASIS_" + thingType);
-					bim.LoadImageNow();
-					// Force texture creation so 3D view can use it (otherwise it may be created later on a different context)
-					if (bim.IsImageLoaded && General.Map != null && General.Map.Graphics != null)
+					Bitmap prepared = new Bitmap(fromFile);
+					// Normalize alpha for external OASIS sprites:
+					// some generated PNGs have alpha in range [N..255] (never reaching 0),
+					// which renders as a full rectangular slab in 3D. Remap min alpha to 0.
+					byte minA = 255;
+					byte maxA = 0;
+					for (int y = 0; y < prepared.Height; y++)
 					{
-						try { _ = bim.Texture; } catch { /* ignore */ }
+						for (int x = 0; x < prepared.Width; x++)
+						{
+							byte a = prepared.GetPixel(x, y).A;
+							if (a < minA) minA = a;
+							if (a > maxA) maxA = a;
+						}
 					}
+					if (minA > 0 && maxA > minA)
+					{
+						int denom = maxA - minA;
+						for (int y = 0; y < prepared.Height; y++)
+						{
+							for (int x = 0; x < prepared.Width; x++)
+							{
+								Color c = prepared.GetPixel(x, y);
+								int na = ((c.A - minA) * 255) / denom;
+								if (na < 8) na = 0; // snap tiny fringe to transparent
+								prepared.SetPixel(x, y, Color.FromArgb(na, c.R, c.G, c.B));
+							}
+						}
+					}
+					// Remove flat square background by flood-filling from image borders using border-color similarity.
+					// This preserves interior pixels even if they are similar to background, as long as not border-connected.
+					int bw = prepared.Width;
+					int bh = prepared.Height;
+					if (bw > 2 && bh > 2)
+					{
+						long sumR = 0, sumG = 0, sumB = 0, bcount = 0;
+						for (int x = 0; x < bw; x++)
+						{
+							Color ct = prepared.GetPixel(x, 0);
+							Color cb = prepared.GetPixel(x, bh - 1);
+							sumR += ct.R + cb.R; sumG += ct.G + cb.G; sumB += ct.B + cb.B; bcount += 2;
+						}
+						for (int y = 1; y < bh - 1; y++)
+						{
+							Color cl = prepared.GetPixel(0, y);
+							Color cr = prepared.GetPixel(bw - 1, y);
+							sumR += cl.R + cr.R; sumG += cl.G + cr.G; sumB += cl.B + cr.B; bcount += 2;
+						}
+						Color bg = Color.FromArgb((int)(sumR / bcount), (int)(sumG / bcount), (int)(sumB / bcount));
+						const int BG_TOL = 42; // Manhattan RGB distance threshold
+
+						bool[,] visited = new bool[bw, bh];
+						Queue<Point> q = new Queue<Point>();
+						Action<int, int> enqueue = (xx, yy) =>
+						{
+							if (xx < 0 || yy < 0 || xx >= bw || yy >= bh) return;
+							if (visited[xx, yy]) return;
+							visited[xx, yy] = true;
+							q.Enqueue(new Point(xx, yy));
+						};
+
+						for (int x = 0; x < bw; x++) { enqueue(x, 0); enqueue(x, bh - 1); }
+						for (int y = 1; y < bh - 1; y++) { enqueue(0, y); enqueue(bw - 1, y); }
+
+						while (q.Count > 0)
+						{
+							Point pnt = q.Dequeue();
+							Color c = prepared.GetPixel(pnt.X, pnt.Y);
+							if (c.A == 0) continue;
+							int dist = Math.Abs(c.R - bg.R) + Math.Abs(c.G - bg.G) + Math.Abs(c.B - bg.B);
+							if (dist > BG_TOL) continue;
+							prepared.SetPixel(pnt.X, pnt.Y, Color.FromArgb(0, c.R, c.G, c.B));
+							enqueue(pnt.X - 1, pnt.Y);
+							enqueue(pnt.X + 1, pnt.Y);
+							enqueue(pnt.X, pnt.Y - 1);
+							enqueue(pnt.X, pnt.Y + 1);
+						}
+					}
+
+					var bim = new BitmapImage(prepared, "OASIS_" + thingType);
+					bim.LoadImageNow();
 					lock (thingSpriteOverrideLock)
 					{
 						thingSpriteOverrideCache[thingType] = bim;
@@ -964,6 +1091,129 @@ namespace CodeImp.DoomBuilder.UDBScript
 				General.ErrorLogger.Add(CodeImp.DoomBuilder.ErrorType.Error, "OASIS display pack: failed to load " + pathByType + ": " + ex.Message);
 				return null;
 			}
+		}
+
+		public override bool TryGetThingInfoOverride(int thingType, out KeyValuePair<string, string> thingInfo)
+		{
+			thingInfo = new KeyValuePair<string, string>();
+			if(thingType < OASIS_THING_TYPE_MIN)
+				return false;
+
+			EnsureOasisThingInfoOverridesLoaded();
+			lock(thingInfoOverrideLock)
+			{
+				return thingInfoOverrideCache.TryGetValue(thingType, out thingInfo);
+			}
+		}
+
+		private void EnsureOasisThingInfoOverridesLoaded()
+		{
+			lock(thingInfoOverrideLock)
+			{
+				if(thingInfoOverrideLoaded) return;
+			}
+
+			List<string> candidates = GetOasisStarScriptCandidates("OASIS_STAR_Place_Selected.js");
+			foreach(string scriptPath in candidates)
+			{
+				try
+				{
+					string fullPath = Path.GetFullPath(scriptPath);
+					if(!File.Exists(fullPath)) continue;
+
+					LoadOasisThingInfoOverridesFromScript(fullPath);
+					lock(thingInfoOverrideLock) thingInfoOverrideLoaded = true;
+					return;
+				}
+				catch
+				{
+					// Try next candidate.
+				}
+			}
+
+			if(!loggedOasisThingInfoPathWarning)
+			{
+				loggedOasisThingInfoPathWarning = true;
+				string firstResolved = candidates.Count > 0 ? Path.GetFullPath(candidates[0]) : "(none)";
+				General.ErrorLogger.Add(CodeImp.DoomBuilder.ErrorType.Warning,
+					"OASIS metadata: OASIS_STAR_Place_Selected.js not found. First path tried: " + firstResolved + ".");
+			}
+
+			lock(thingInfoOverrideLock) thingInfoOverrideLoaded = true;
+		}
+
+		private void LoadOasisThingInfoOverridesFromScript(string scriptPath)
+		{
+			string script = File.ReadAllText(scriptPath);
+			Regex rowRegex = new Regex(@"\[\s*""[^""]+""\s*,\s*""[^""]+""\s*,\s*""([^""]+)""\s*,\s*""([^""]+)""\s*,\s*(\d+)\s*\]", RegexOptions.Compiled);
+			MatchCollection matches = rowRegex.Matches(script);
+
+			lock(thingInfoOverrideLock)
+			{
+				thingInfoOverrideCache.Clear();
+				foreach(Match m in matches)
+				{
+					if(!m.Success) continue;
+
+					int type;
+					if(!int.TryParse(m.Groups[3].Value, out type)) continue;
+
+					string classId = UnescapeJsString(m.Groups[1].Value);
+					string title = UnescapeJsString(m.Groups[2].Value);
+					if(string.IsNullOrEmpty(title))
+						title = classId;
+
+					thingInfoOverrideCache[type] = new KeyValuePair<string, string>(title, classId);
+				}
+			}
+		}
+
+		private static string UnescapeJsString(string value)
+		{
+			if(string.IsNullOrEmpty(value)) return value;
+			return value.Replace("\\\"", "\"").Replace("\\\\", "\\");
+		}
+
+		private static List<string> GetOasisStarScriptCandidates(string fileName)
+		{
+			var candidates = new List<string>
+			{
+				Path.Combine(General.AppPath, SCRIPT_FOLDER, "Scripts", "OASIS", fileName),
+				Path.Combine(General.AppPath, "Assets", "Common", SCRIPT_FOLDER, "Scripts", "OASIS", fileName),
+				Path.Combine(General.AppPath, "..", "Assets", "Common", SCRIPT_FOLDER, "Scripts", "OASIS", fileName),
+			};
+
+			try
+			{
+				string pluginDir = Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location);
+				if(!string.IsNullOrEmpty(pluginDir))
+				{
+					candidates.Add(Path.Combine(pluginDir, "..", SCRIPT_FOLDER, "Scripts", "OASIS", fileName));
+					candidates.Add(Path.Combine(pluginDir, "..", "..", "Assets", "Common", SCRIPT_FOLDER, "Scripts", "OASIS", fileName));
+					candidates.Add(Path.Combine(pluginDir, "..", "..", "..", "..", "Assets", "Common", SCRIPT_FOLDER, "Scripts", "OASIS", fileName));
+				}
+
+				Assembly entry = Assembly.GetEntryAssembly();
+				if(entry != null)
+				{
+					string entryDir = Path.GetDirectoryName(entry.Location);
+					if(!string.IsNullOrEmpty(entryDir))
+					{
+						candidates.Add(Path.Combine(entryDir, SCRIPT_FOLDER, "Scripts", "OASIS", fileName));
+						candidates.Add(Path.Combine(entryDir, "Assets", "Common", SCRIPT_FOLDER, "Scripts", "OASIS", fileName));
+						for(string walk = Path.GetDirectoryName(entryDir); !string.IsNullOrEmpty(walk) && walk != Path.GetPathRoot(walk); walk = Path.GetDirectoryName(walk))
+						{
+							string scriptUnderUdb = Path.Combine(walk, SCRIPT_FOLDER, "Scripts", "OASIS", fileName);
+							if(!candidates.Contains(scriptUnderUdb)) candidates.Add(scriptUnderUdb);
+							string scriptUnderAssets = Path.Combine(walk, "Assets", "Common", SCRIPT_FOLDER, "Scripts", "OASIS", fileName);
+							if(!candidates.Contains(scriptUnderAssets)) candidates.Add(scriptUnderAssets);
+						}
+					}
+				}
+			}
+			catch { }
+
+			return candidates;
 		}
 
 		#endregion

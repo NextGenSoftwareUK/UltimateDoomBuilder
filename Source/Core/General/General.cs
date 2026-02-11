@@ -298,6 +298,19 @@ namespace CodeImp.DoomBuilder
 		/// </summary>
 		public static ImageData GetThingSpriteOverride(int thingType) => plugins?.GetThingSpriteOverride(thingType);
 
+		/// <summary>
+		/// First plugin that returns true for thing metadata override wins.
+		/// thingInfo.Key = display title, thingInfo.Value = class/id.
+		/// </summary>
+		public static bool TryGetThingInfoOverride(int thingType, out KeyValuePair<string, string> thingInfo)
+		{
+			if(plugins != null)
+				return plugins.TryGetThingInfoOverride(thingType, out thingInfo);
+
+			thingInfo = new KeyValuePair<string, string>();
+			return false;
+		}
+
 		#endregion
 
 		#region ================== Configurations

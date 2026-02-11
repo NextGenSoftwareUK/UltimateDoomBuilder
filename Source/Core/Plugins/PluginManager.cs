@@ -326,6 +326,22 @@ namespace CodeImp.DoomBuilder.Plugins
 			}
 			return null;
 		}
+
+		/// <summary>
+		/// First plugin that returns true for thing metadata override wins.
+		/// thingInfo.Key = display title, thingInfo.Value = class/id.
+		/// </summary>
+		public bool TryGetThingInfoOverride(int thingType, out KeyValuePair<string, string> thingInfo)
+		{
+			foreach(Plugin p in plugins)
+			{
+				if(p.Plug.TryGetThingInfoOverride(thingType, out thingInfo))
+					return true;
+			}
+
+			thingInfo = new KeyValuePair<string, string>();
+			return false;
+		}
 		
 		#endregion
 	}

@@ -1,6 +1,7 @@
 #region ================== Namespaces
 
 using System;
+using System.Collections.Generic;
 using System.IO;
 using System.Windows.Forms;
 using CodeImp.DoomBuilder.Config;
@@ -347,6 +348,19 @@ namespace CodeImp.DoomBuilder.Plugins
 		/// <param name="thingType">Doom thing type index</param>
 		/// <returns>ImageData to use when drawing, or null to use default</returns>
 		public virtual ImageData GetThingSpriteOverride(int thingType) { return null; }
+
+		/// <summary>
+		/// Optional override for thing display metadata (title/classname) in UI panels.
+		/// Return true when override data is available for the specified thing type.
+		/// </summary>
+		/// <param name="thingType">Doom thing type index</param>
+		/// <param name="thingInfo">Key=title, Value=classname/id</param>
+		/// <returns>True when override metadata is provided; otherwise false</returns>
+		public virtual bool TryGetThingInfoOverride(int thingType, out KeyValuePair<string, string> thingInfo)
+		{
+			thingInfo = new KeyValuePair<string, string>();
+			return false;
+		}
 
 		#endregion
 	}

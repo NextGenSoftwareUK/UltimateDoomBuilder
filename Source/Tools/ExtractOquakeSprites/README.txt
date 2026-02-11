@@ -28,3 +28,4 @@ After running, open your map in Ultimate Doom Builder; OQUAKE thing types
 that have a PNG in the Sprites folder will show the Quake sprite in 2D/3D.
 
 
+

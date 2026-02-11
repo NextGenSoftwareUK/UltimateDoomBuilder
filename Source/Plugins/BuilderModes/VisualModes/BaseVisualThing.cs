@@ -98,6 +98,9 @@ namespace CodeImp.DoomBuilder.BuilderModes
 				mode.AddSelectedObject(this);
 			}
 
+			// Build geometry once so 3D view has something to draw (e.g. OASIS override may load async; Update() will call Setup() again when loaded)
+			Setup();
+
 			// We have no destructor
 			GC.SuppressFinalize(this);
 		}
@@ -322,6 +325,21 @@ namespace CodeImp.DoomBuilder.BuilderModes
 			base.textures = new ImageData[info.SpriteFrame.Length];
 			isloaded = true;
 
+			// OASIS sprite override (e.g. OQUAKE): scale so 3D billboard matches 2D view; unknown thing type has small radius so quad would be tiny
+			bool useOasisOverride = (General.GetThingSpriteOverride(Thing.Type) != null);
+			if(useOasisOverride)
+			{
+				// Keep OASIS display-pack sprites readable in 3D regardless of sector lighting/fog.
+				sectorcolor = new PixelColor(255, 255, 255, 255).ToInt();
+				fogfactor = 0f;
+				// Use masked pass so PNG transparency cuts out the square background in 3D.
+				RenderPass = RenderPass.Mask;
+			}
+			const float OASIS_3D_SIZE_MULTIPLIER = 1f;
+			const float OASIS_MIN_SIZE = 24f;
+			const float OASIS_TARGET_HEIGHT = 12f;
+			const float OASIS_MAX_WIDTH = 10f;
+
 			for(int i = 0; i < sprites.Length; i++)
 			{
 				Vector2D offsets = new Vector2D();
@@ -346,6 +364,29 @@ namespace CodeImp.DoomBuilder.BuilderModes
 					height *= info.SpriteScale.Height;
 					offsets.x *= info.SpriteScale.Width;
 					offsets.y *= info.SpriteScale.Height;
+
+					// OASIS override: scale billboard so it matches 2D view size; keep within sane 3D bounds
+					if(useOasisOverride)
+					{
+						radius *= OASIS_3D_SIZE_MULTIPLIER;
+						height *= OASIS_3D_SIZE_MULTIPLIER;
+						offsets.x *= OASIS_3D_SIZE_MULTIPLIER;
+						offsets.y *= OASIS_3D_SIZE_MULTIPLIER;
+						if(radius < OASIS_MIN_SIZE * 0.5f) radius = OASIS_MIN_SIZE * 0.5f;
+						if(height < OASIS_MIN_SIZE) height = OASIS_MIN_SIZE;
+						// Deterministic OASIS 3D scale: normalize to target height, clamp width.
+						if(height > 0.001f)
+						{
+							float s = OASIS_TARGET_HEIGHT / height;
+							radius *= s;
+							height = OASIS_TARGET_HEIGHT;
+						}
+						if(radius * 2f > OASIS_MAX_WIDTH)
+							radius = OASIS_MAX_WIDTH * 0.5f;
+						// OASIS external PNGs don't carry Doom sprite offsets. Anchor to center/floor in 3D.
+						offsets.x = 0f;
+						offsets.y = 0f;
+					}
 
 					// Make vertices
 					WorldVertex[] verts = new WorldVertex[6];
@@ -380,13 +421,33 @@ namespace CodeImp.DoomBuilder.BuilderModes
 					isloaded = false;
 					base.textures[i] = sprite;
 
-					// Determine sprite size
-					float radius = Math.Min(thingradius, thingheight / 2f);
-					float height = Math.Min(thingradius * 2f, thingheight);
+					// Determine sprite size (OASIS override: use fixed large fallback so quad is visible while texture loads)
+					float radius, height;
+					if(useOasisOverride)
+					{
+						// Keep fallback visible but not oversized.
+						const float OASIS_FALLBACK_SIZE = 12f;
+						radius = OASIS_FALLBACK_SIZE * 0.5f;
+						height = OASIS_FALLBACK_SIZE;
+					}
+					else
+					{
+						radius = Math.Min(thingradius, thingheight / 2f);
+						height = Math.Min(thingradius * 2f, thingheight);
+					}
 
 					//mxd. Determine sprite offsets
-					offsets.x = radius;
-					offsets.y = height / 2;
+					if(useOasisOverride)
+					{
+						// Keep OASIS fallback quad centered and resting on floor
+						offsets.x = 0f;
+						offsets.y = 0f;
+					}
+					else
+					{
+						offsets.x = radius;
+						offsets.y = height / 2;
+					}
 
 					// Make vertices
 					WorldVertex[] verts = new WorldVertex[6];
@@ -469,7 +530,7 @@ namespace CodeImp.DoomBuilder.BuilderModes
 					}
 				}
 			}
-			
+
 			// Apply settings
 			SetPosition(pos);
 			SetCageColor(Thing.Color);

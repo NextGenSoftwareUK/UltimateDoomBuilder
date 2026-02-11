@@ -13,3 +13,4 @@ To use real Quake 1 sprites for OQUAKE assets in the editor:
 
 Output: 5005.png = Gold key, 5013.png = Silver key, 5303.png = Shambler, etc.
 If you don't have pak0.pak, you can add PNGs manually (name by unique type).
+
