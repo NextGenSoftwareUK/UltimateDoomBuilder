@@ -1,4 +1,4 @@
-﻿#region ================== Copyright (c) 2022 Boris Iwanski
+#region ================== Copyright (c) 2022 Boris Iwanski
 
 /*
  * This program is free software: you can redistribute it and/or modify
@@ -216,7 +216,7 @@ namespace CodeImp.DoomBuilder.UDBScript
 			if (progressbar.Style == ProgressBarStyle.Marquee)
 				progressbar.Style = ProgressBarStyle.Continuous;
 
-			if (autoclose)
+			if (autoclose || BuilderPlug.Me.HasPendingStarPlacement)
 			{
 				MakeInvisible();
 				//Hide();

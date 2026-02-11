@@ -1380,7 +1380,7 @@ namespace CodeImp.DoomBuilder.Rendering
 					foreach(KeyValuePair<int, List<Thing>> framegroup in thingsbyangle)
 					{
 						SpriteFrameInfo sfi = info.SpriteFrame[framegroup.Key];
-						ImageData sprite = General.Plugins.GetThingSpriteOverride(group.Key) ?? General.Map.Data.GetSpriteImage(sfi.Sprite);
+						ImageData sprite = General.GetThingSpriteOverride(group.Key) ?? General.Map.Data.GetSpriteImage(sfi.Sprite);
 						if(sprite == null) continue;
 
 						graphics.SetTexture(sprite.Texture);

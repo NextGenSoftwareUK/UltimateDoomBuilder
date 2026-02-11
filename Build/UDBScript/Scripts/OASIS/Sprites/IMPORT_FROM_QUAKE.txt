@@ -9,3 +9,4 @@ To use real Quake 1 sprites for OQUAKE assets in the editor:
 
 If you don't have pak0.pak, you can still add PNGs manually (name them by Doom thing type: 5.png, 13.png, 2001.png, etc.).
 
+

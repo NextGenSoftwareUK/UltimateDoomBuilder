@@ -11,3 +11,4 @@ To (re)import Quake 1 sprites from your id1 folder, run:
   ExtractOquakeSprites.exe "C:\path\to\id1" "C:\path\to\this\Sprites\folder"
 See IMPORT_FROM_QUAKE.txt in this folder.
 
+

@@ -2720,7 +2720,7 @@ namespace CodeImp.DoomBuilder.Windows
 			// 
 			// display
 			// 
-			this.display.BackColor = System.Drawing.SystemColors.ControlDarkDark;
+			this.display.BackColor = System.Drawing.Color.Black;
 			this.display.BackgroundImageLayout = System.Windows.Forms.ImageLayout.Center;
 			this.display.BorderStyle = System.Windows.Forms.BorderStyle.Fixed3D;
 			this.display.CausesValidation = false;

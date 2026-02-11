@@ -92,9 +92,13 @@ if (typeof q.options.asset === 'number' && q.options.asset >= 0 && q.options.ass
 if (idx < 0) { UDB.log("OASIS STAR: Invalid selection."); return; }
 var row = ASSETS[idx];
 var doomType = row[4];
-// Tell the plugin to place this thing on the next map click
+if (typeof UDB.setPendingStarPlacement !== "function") {
+    UDB.log("OASIS STAR: setPendingStarPlacement not available. Update UDBScript plugin.");
+    return;
+}
 UDB.setPendingStarPlacement(doomType, row[3]);
-UDB.log("OASIS STAR: Now click on the map where you want to place " + row[3] + ".");
+UDB.log("OASIS STAR: Selected " + row[3] + " (type " + doomType + "). Click on the map to place.");
+
 
 
 

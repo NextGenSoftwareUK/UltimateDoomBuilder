@@ -132,6 +132,8 @@ namespace CodeImp.DoomBuilder.UDBScript
 		internal ScriptDirectoryStructure ScriptDirectoryStructure { get { return scriptdirectorystructure; } }
 		internal string EditorExePath { get { return editorexepath; } }
 		public ScriptRunnerForm ScriptRunnerForm { get { return scriptrunnerform; } }
+		/// <summary>True when OASIS STAR script set click-to-place; script runner should close so user can click the map.</summary>
+		internal bool HasPendingStarPlacement { get { return pendingStarThingType.HasValue; } }
 
 		#endregion
 
@@ -817,6 +819,14 @@ namespace CodeImp.DoomBuilder.UDBScript
 				else
 					pos = new Vector2D(0, 0);
 
+				// Reject clicks outside map boundaries (same as ThingsMode.InsertThing)
+				if (pos.x < General.Map.Config.LeftBoundary || pos.x > General.Map.Config.RightBoundary ||
+					pos.y > General.Map.Config.TopBoundary || pos.y < General.Map.Config.BottomBoundary)
+				{
+					General.Interface.DisplayStatus(CodeImp.DoomBuilder.Windows.StatusType.Warning, "OASIS STAR: Click inside the map.");
+					return;
+				}
+
 				int type = pendingStarThingType.Value;
 				pendingStarThingType = null;
 				string name = pendingStarAssetName;
@@ -829,6 +839,10 @@ namespace CodeImp.DoomBuilder.UDBScript
 				{
 					General.Settings.ApplyCleanThingSettings(t, type);
 					t.Move(snapped);
+					t.DetermineSector();
+					// Set height to sector floor so the thing is at the correct Z
+					if (t.Sector != null)
+						t.Move(new Vector3D(snapped.x, snapped.y, t.Sector.FloorHeight));
 					t.UpdateConfiguration();
 					if (General.Map.UDMF)
 					{
@@ -845,11 +859,17 @@ namespace CodeImp.DoomBuilder.UDBScript
 						t.SetFlag("4", true);
 					}
 					General.Map.Map.Update();
+					// Rebuild things filter so the new thing appears in VisibleThings (2D view draws from filter, not Map.Things)
+					General.Map.ThingsFilter.Update();
 					General.Interface.RedrawDisplay();
 					General.Interface.DisplayStatus(CodeImp.DoomBuilder.Windows.StatusType.Info, "OASIS STAR: Placed " + name + ".");
 					// In Things mode the same click also inserts the mode's default thing; undo it so only our thing remains
 					if (General.Editing.Mode is ThingsMode)
-						General.Interface.BeginInvoke(new Action(() => { if (General.Map != null) General.Map.UndoRedo.Undo(); }));
+					{
+						var ctrl = Control.FromHandle(General.Interface.Handle);
+						if (ctrl != null)
+							ctrl.BeginInvoke(new System.Action(() => { if (General.Map != null) General.Map.UndoRedo.PerformUndo(); }));
+					}
 				}
 				return;
 			}

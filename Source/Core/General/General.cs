@@ -292,6 +292,12 @@ namespace CodeImp.DoomBuilder
 		public static ToastManager ToastManager { get => toastmanager; }
 		internal static AutoSaver AutoSaver { get => autosaver; }
 
+		/// <summary>
+		/// First plugin that returns a non-null ImageData for this thing type wins (e.g. OQUAKE/ODOOM display pack).
+		/// Call this from plugins/other assemblies instead of General.Plugins.GetThingSpriteOverride.
+		/// </summary>
+		public static ImageData GetThingSpriteOverride(int thingType) => plugins?.GetThingSpriteOverride(thingType);
+
 		#endregion
 
 		#region ================== Configurations

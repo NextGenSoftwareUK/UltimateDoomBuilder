@@ -77,7 +77,7 @@ namespace CodeImp.DoomBuilder.BuilderModes
 			nointeraction = (info.Actor != null && info.Actor.GetFlagValue("nointeraction", false));
 
 			//mxd. Find sprite textures (or use plugin override e.g. OQUAKE display pack)
-			ImageData overrideSprite = General.Plugins.GetThingSpriteOverride(Thing.Type);
+			ImageData overrideSprite = General.GetThingSpriteOverride(Thing.Type);
 			sprites = new ImageData[info.SpriteFrame.Length];
 			if(overrideSprite != null)
 			{
@@ -520,7 +520,7 @@ namespace CodeImp.DoomBuilder.BuilderModes
 			nointeraction = (info.Actor != null && info.Actor.GetFlagValue("nointeraction", false));
 
 			//mxd. Find sprite textures (or use plugin override e.g. OQUAKE display pack)
-			ImageData overrideSprite = General.Plugins.GetThingSpriteOverride(Thing.Type);
+			ImageData overrideSprite = General.GetThingSpriteOverride(Thing.Type);
 			sprites = new ImageData[info.SpriteFrame.Length];
 			if(overrideSprite != null)
 			{
