@@ -863,13 +863,6 @@ namespace CodeImp.DoomBuilder.UDBScript
 					General.Map.ThingsFilter.Update();
 					General.Interface.RedrawDisplay();
 					General.Interface.DisplayStatus(CodeImp.DoomBuilder.Windows.StatusType.Info, "OASIS STAR: Placed " + name + ".");
-					// In Things mode the same click also inserts the mode's default thing; undo it so only our thing remains
-					if (General.Editing.Mode is ThingsMode)
-					{
-						var ctrl = Control.FromHandle(General.Interface.Handle);
-						if (ctrl != null)
-							ctrl.BeginInvoke(new System.Action(() => { if (General.Map != null) General.Map.UndoRedo.PerformUndo(); }));
-					}
 				}
 				return;
 			}
@@ -917,6 +910,7 @@ namespace CodeImp.DoomBuilder.UDBScript
 
 		/// <summary>
 		/// Optional sprite override for thing types (e.g. OQUAKE/ODOOM display pack). Returns ImageData from pack if present.
+		/// Tries AppPath\UDBScript\Scripts\OASIS\Sprites then Assets\Common\UDBScript\Scripts\OASIS\Sprites so extractor output in either place is used.
 		/// </summary>
 		public override ImageData GetThingSpriteOverride(int thingType)
 		{
@@ -925,16 +919,39 @@ namespace CodeImp.DoomBuilder.UDBScript
 				if (thingSpriteOverrideCache.TryGetValue(thingType, out ImageData cached))
 					return cached;
 			}
-			string packPath = Path.Combine(General.AppPath, SCRIPT_FOLDER, "Scripts", "OASIS", OASIS_SPRITES_FOLDER);
-			if (!Directory.Exists(packPath)) return null;
-			string pathByType = Path.Combine(packPath, thingType + ".png");
-			if (!File.Exists(pathByType)) return null;
+			string fileName = thingType + ".png";
+			string[] candidateDirs = new[]
+			{
+				Path.Combine(General.AppPath, SCRIPT_FOLDER, "Scripts", "OASIS", OASIS_SPRITES_FOLDER),
+				Path.Combine(General.AppPath, "Assets", "Common", SCRIPT_FOLDER, "Scripts", "OASIS", OASIS_SPRITES_FOLDER),
+				Path.Combine(General.AppPath, "..", "Assets", "Common", SCRIPT_FOLDER, "Scripts", "OASIS", OASIS_SPRITES_FOLDER),
+			};
+			string pathByType = null;
+			foreach (string dir in candidateDirs)
+			{
+				string fullDir = Path.GetFullPath(dir);
+				if (Directory.Exists(fullDir))
+				{
+					string p = Path.Combine(fullDir, fileName);
+					if (File.Exists(p))
+					{
+						pathByType = p;
+						break;
+					}
+				}
+			}
+			if (pathByType == null) return null;
 			try
 			{
 				using (Bitmap fromFile = (Bitmap)Image.FromFile(pathByType))
 				{
 					var bim = new BitmapImage(new Bitmap(fromFile), "OASIS_" + thingType);
 					bim.LoadImageNow();
+					// Force texture creation so 3D view can use it (otherwise it may be created later on a different context)
+					if (bim.IsImageLoaded && General.Map != null && General.Map.Graphics != null)
+					{
+						try { _ = bim.Texture; } catch { /* ignore */ }
+					}
 					lock (thingSpriteOverrideLock)
 					{
 						thingSpriteOverrideCache[thingType] = bim;

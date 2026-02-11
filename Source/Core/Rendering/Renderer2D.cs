@@ -1380,8 +1380,12 @@ namespace CodeImp.DoomBuilder.Rendering
 					foreach(KeyValuePair<int, List<Thing>> framegroup in thingsbyangle)
 					{
 						SpriteFrameInfo sfi = info.SpriteFrame[framegroup.Key];
-						ImageData sprite = General.GetThingSpriteOverride(group.Key) ?? General.Map.Data.GetSpriteImage(sfi.Sprite);
+						ImageData overrideSprite = General.GetThingSpriteOverride(group.Key);
+						ImageData sprite = overrideSprite ?? General.Map.Data.GetSpriteImage(sfi.Sprite);
 						if(sprite == null) continue;
+
+						// When using OASIS sprite override (e.g. OQUAKE), thing type is often unknown so radius=10; scale up so sprite matches Doom thing size
+						const float OASIS_OVERRIDE_SIZE_MULTIPLIER = 2f;
 
 						graphics.SetTexture(sprite.Texture);
 
@@ -1401,6 +1405,7 @@ namespace CodeImp.DoomBuilder.Rendering
 
 							bool forcespriterendering;
 							float spritewidth, spriteheight, spritescale;
+							float effectiveSize = (overrideSprite != null) ? (t.Size * OASIS_OVERRIDE_SIZE_MULTIPLIER) : t.Size;
 
 							// Determine sizes
 							if(t.FixedSize && scale > 1.0f)
@@ -1419,20 +1424,20 @@ namespace CodeImp.DoomBuilder.Rendering
 								forcespriterendering = false;
 							}
 
-							// Calculate scaled sprite size
+							// Calculate scaled sprite size (use effectiveSize so OASIS override sprites display at Doom-like scale)
 							if(sprite.Width > sprite.Height)
 							{
-								spritewidth = (t.Size - THING_SPRITE_SHRINK) * spritescale;
+								spritewidth = (effectiveSize - THING_SPRITE_SHRINK) * spritescale;
 								spriteheight = spritewidth * ((float)sprite.Height / sprite.Width);
 							}
 							else if(sprite.Width < sprite.Height)
 							{
-								spriteheight = (t.Size - THING_SPRITE_SHRINK) * spritescale;
+								spriteheight = (effectiveSize - THING_SPRITE_SHRINK) * spritescale;
 								spritewidth = spriteheight * ((float)sprite.Width / sprite.Height);
 							}
 							else
 							{
-								spritewidth = (t.Size - THING_SPRITE_SHRINK) * spritescale;
+								spritewidth = (effectiveSize - THING_SPRITE_SHRINK) * spritescale;
 								spriteheight = spritewidth;
 							}
 

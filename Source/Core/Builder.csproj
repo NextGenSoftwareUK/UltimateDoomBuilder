@@ -1683,9 +1683,9 @@
   </ItemGroup>
   <!-- Do NOT delete $(OutputPath) before build: BuilderNative.dll and other outputs live there. -->
   <Target Name="CopyAssetsToBuildFolder" AfterTargets="AfterBuild">
-    <!-- Copy all asset files to the build output directory -->
+    <!-- Copy all asset files to the build output directory (skip missing files, e.g. removed OASIS Sprites) -->
     <ItemGroup>
-      <AssetsToCopy Include="@(None)" Condition="'%(None.IsAsset)' == 'true'" />
+      <AssetsToCopy Include="@(None)" Condition="'%(None.IsAsset)' == 'true' and Exists('%(None.FullPath)')" />
     </ItemGroup>
     <Message Importance="High" Text="Copying Assets to: $(OutputPath)" />
     <Copy SourceFiles="@(AssetsToCopy)" DestinationFiles="$(OutputPath)%(Link)" SkipUnchangedFiles="true" OverwriteReadOnlyFiles="true" />

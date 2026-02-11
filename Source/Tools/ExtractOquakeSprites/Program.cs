@@ -5,6 +5,7 @@
 using System;
 using System.Collections.Generic;
 using System.Drawing;
+using System.Drawing.Drawing2D;
 using System.Drawing.Imaging;
 using System.IO;
 using System.Runtime.InteropServices;
@@ -18,42 +19,69 @@ namespace ExtractOquakeSprites
 		// "IDPO" in file (little-endian): bytes I,D,P,O -> read as 0x4F504449
 		const int IDPOLYHEADER = 0x4F504449;
 
-		// Quake 1 progs model (in pak) -> OASIS thing type (same asset works in Doom & OQuake)
-		static readonly Dictionary<string, int> ModelToThingType = new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase)
+		// Quake 1 progs model (in pak) -> OASIS unique thing type(s). One model can output multiple PNGs (same image).
+		// Keys/weapons/ammo/health: 5xxx. Monsters: 53xx, 3010, 3011.
+		static readonly List<(string model, int uniqueType)> ModelToUniqueType = new List<(string, int)>
 		{
-			{ "progs/w_s_key.mdl", 13 },   // Silver key (interop: collect in Doom, use in OQuake)
-			{ "progs/w_g_key.mdl", 5 },    // Gold key
-			{ "progs/g_shot.mdl", 2001 },
-			{ "progs/g_nail.mdl", 2002 },
-			{ "progs/g_rock.mdl", 2003 },
-			{ "progs/g_light.mdl", 2004 },
-			{ "progs/armor.mdl", 2015 },
-			{ "progs/backpack.mdl", 2049 },
-			{ "progs/ogre.mdl", 9 },
-			{ "progs/demon.mdl", 3002 },
-			{ "progs/shambler.mdl", 3003 },
-			{ "progs/soldier.mdl", 3004 },
-			{ "progs/zombie.mdl", 3011 },
-			{ "progs/knight.mdl", 69 },
-			{ "progs/wizard.mdl", 66 },
-			{ "progs/dog.mdl", 3010 },
+			("progs/w_s_key.mdl", 5013),   // Silver key
+			("progs/w_g_key.mdl", 5005),   // Gold key
+			("progs/g_shot.mdl", 5201),    // Shotgun
+			("progs/g_shot.mdl", 5202),    // Super Shotgun (same sprite)
+			("progs/g_nail.mdl", 5203),
+			("progs/g_nail.mdl", 5204),    // Super Nailgun
+			("progs/g_rock.mdl", 5205),
+			("progs/g_rock.mdl", 5206),    // Rocket Launcher
+			("progs/g_light.mdl", 5207),
+			("progs/g_shot.mdl", 5209),     // Shells
+			("progs/g_nail.mdl", 5208),    // Nails/spikes
+			("progs/g_rock.mdl", 5210),    // Rockets
+			("progs/g_light.mdl", 5211),   // Cells
+			("progs/armor.mdl", 5214),     // Green Armor
+			("progs/armor.mdl", 5215),     // Yellow Armor
+			("progs/armor.mdl", 5216),     // Mega Armor (reuse armor sprite)
+			("progs/ogre.mdl", 5309),
+			("progs/demon.mdl", 5302),
+			("progs/shambler.mdl", 5303),
+			("progs/soldier.mdl", 5304),
+			("progs/zombie.mdl", 3011),
+			("progs/knight.mdl", 5369),
+			("progs/wizard.mdl", 5366),
+			("progs/dog.mdl", 3010),
+			("progs/fish.mdl", 5305),
+			("progs/spawn.mdl", 5368),
+		};
+		// Health: reuse armor sprite if no health model in pak
+		static readonly List<(string model, int uniqueType)> ModelToUniqueTypeHealth = new List<(string, int)>
+		{
+			("progs/armor.mdl", 5212),     // Health (reuse armor if no health model)
+			("progs/armor.mdl", 5213),     // Small Health
 		};
 
-		// Standard Quake 1 palette (256 * 3 bytes). Index 255 = transparent in Quake.
-		static readonly byte[] QuakePalette = LoadQuakePalette();
+		// Quake 1 palette (256 * 3 bytes). Set from gfx/palette.lmp in pak, or fallback. Index 255 = transparent.
+		static byte[] QuakePalette;
 
-		static byte[] LoadQuakePalette()
+		/// <summary>Load palette from pak gfx/palette.lmp (768 bytes) for correct colors; else grayscale fallback.</summary>
+		static void LoadQuakePalette(PakFile pak)
 		{
-			// Default Quake 1 palette (first 256 colors). Entry 255 is often green/magenta for transparency.
-			var p = new byte[768];
+			byte[] fromPak = pak.ReadFile("gfx/palette.lmp");
+			if (fromPak != null && fromPak.Length >= 768)
+			{
+				QuakePalette = new byte[768];
+				Buffer.BlockCopy(fromPak, 0, QuakePalette, 0, 768);
+				Console.WriteLine("  palette: gfx/palette.lmp (color)");
+				return;
+			}
+			QuakePalette = new byte[768];
 			for (int i = 0; i < 256; i++)
 			{
-				// Simple fallback: grayscale + index 255 = magenta (transparent)
-				if (i == 255) { p[i * 3] = 255; p[i * 3 + 1] = 0; p[i * 3 + 2] = 255; }
-				else { byte b = (byte)i; p[i * 3] = b; p[i * 3 + 1] = b; p[i * 3 + 2] = b; }
+				if (i == 255) { QuakePalette[i * 3] = 255; QuakePalette[i * 3 + 1] = 0; QuakePalette[i * 3 + 2] = 255; }
+				else { byte b = (byte)i; QuakePalette[i * 3] = b; QuakePalette[i * 3 + 1] = b; QuakePalette[i * 3 + 2] = b; }
 			}
-			return p;
+			Console.WriteLine("  palette: fallback (grayscale)");
 		}
+
+		// Target longest side in pixels so Quake sprites match Doom sprite scale in the editor (Doom keycard is large; 1024 so golden key ~matches blue keycard).
+		const int TARGET_MAX_SIZE = 1024;
 
 		static int Main(string[] args)
 		{
@@ -93,32 +121,62 @@ namespace ExtractOquakeSprites
 				return 0;
 			}
 
+			LoadQuakePalette(pak);
+			Console.WriteLine("  scale: longest side " + TARGET_MAX_SIZE + " px (match Doom sprite size)");
+			string spritesFullPath = Path.Combine(Path.GetDirectoryName(outPath), "SpritesFull");
+			Directory.CreateDirectory(spritesFullPath);
+			Console.WriteLine("  Sprites (editor): front half only -> " + outPath);
+			Console.WriteLine("  SpritesFull: full image -> " + spritesFullPath);
+
+			var allMappings = new List<(string model, int uniqueType)>();
+			allMappings.AddRange(ModelToUniqueType);
+			allMappings.AddRange(ModelToUniqueTypeHealth);
+			var skinCache = new Dictionary<string, (byte[] rgba, int w, int h)>(StringComparer.OrdinalIgnoreCase);
 			int count = 0;
-			foreach (var kv in ModelToThingType)
+			foreach (var entry in allMappings)
 			{
-				string pakName = kv.Key.Replace('\\', '/');
-				int doomType = kv.Value;
+				string pakName = entry.model.Replace('\\', '/');
+				int uniqueType = entry.uniqueType;
 				byte[] mdlData = pak.ReadFile(pakName);
 				if (mdlData == null)
 				{
-					Console.WriteLine("  skip " + pakName + ": not in pak");
+					Console.WriteLine("  skip " + pakName + " (type " + uniqueType + "): not in pak");
 					continue;
 				}
-				string failReason;
-				byte[] skinRgba = ExtractFirstSkin(mdlData, out failReason);
-				if (skinRgba == null)
+				byte[] skinRgba;
+				int w, h;
+				if (skinCache.TryGetValue(pakName, out var cached))
 				{
-					Console.WriteLine("  skip " + pakName + ": " + failReason);
-					continue;
+					skinRgba = cached.rgba;
+					w = cached.w;
+					h = cached.h;
 				}
-				int w = BitConverter.ToInt32(mdlData, 52);
-				int h = BitConverter.ToInt32(mdlData, 56);
-				string pngPath = Path.Combine(outPath, doomType + ".png");
-				WritePng(pngPath, w, h, skinRgba);
-				Console.WriteLine("  " + pakName + " -> " + doomType + ".png");
+				else
+				{
+					string failReason;
+					skinRgba = ExtractFirstSkin(mdlData, out failReason);
+					if (skinRgba == null)
+					{
+						Console.WriteLine("  skip " + pakName + ": " + failReason);
+						continue;
+					}
+					w = BitConverter.ToInt32(mdlData, 52);
+					h = BitConverter.ToInt32(mdlData, 56);
+					skinCache[pakName] = (skinRgba, w, h);
+				}
+				int fullW = w, fullH = h;
+				byte[] fullRgba = skinRgba;
+				ScaleToTargetSize(ref fullRgba, ref fullW, ref fullH);
+				// Save full image to SpritesFull
+				WritePng(Path.Combine(spritesFullPath, uniqueType + ".png"), fullW, fullH, fullRgba);
+				// Crop to first half (front side) for editor Sprites folder
+				byte[] frontRgba; int frontW, frontH;
+				CropToFirstHalf(fullRgba, fullW, fullH, out frontRgba, out frontW, out frontH);
+				WritePng(Path.Combine(outPath, uniqueType + ".png"), frontW, frontH, frontRgba);
+				Console.WriteLine("  " + pakName + " " + w + "x" + h + " -> " + uniqueType + ".png (front " + frontW + "x" + frontH + ", full " + fullW + "x" + fullH + ")");
 				count++;
 			}
-			Console.WriteLine("Done. Wrote " + count + " sprites to " + outPath);
+			Console.WriteLine("Done. Wrote " + count + " front-half sprites to " + outPath + ", " + count + " full to " + spritesFullPath);
 			return 0;
 		}
 
@@ -155,17 +213,64 @@ namespace ExtractOquakeSprites
 				skinPixels = new byte[skinSize];
 				Buffer.BlockCopy(mdl, pos, skinPixels, 0, skinSize);
 			}
-			// Convert indexed to RGBA using palette; index 255 = transparent
+			// Convert indexed to BGRA for GDI+ Bitmap (Format32bppArgb uses BGRA in memory on Windows; PNG save outputs correct RGB).
 			byte[] rgba = new byte[skinSize * 4];
 			for (int i = 0; i < skinSize; i++)
 			{
 				int idx = skinPixels[i] & 0xFF;
-				rgba[i * 4]     = QuakePalette[idx * 3];
-				rgba[i * 4 + 1] = QuakePalette[idx * 3 + 1];
-				rgba[i * 4 + 2] = QuakePalette[idx * 3 + 2];
+				int p = idx * 3;
+				rgba[i * 4]     = QuakePalette[p + 2]; // B first (BGRA)
+				rgba[i * 4 + 1] = QuakePalette[p + 1]; // G
+				rgba[i * 4 + 2] = QuakePalette[p];     // R
 				rgba[i * 4 + 3] = (byte)(idx == 255 ? 0 : 255);
 			}
 			return rgba;
+		}
+
+		/// <summary>Extract the first half (left side = front) of the image for editor display. Quake MDL skins pack front+back side by side.</summary>
+		static void CropToFirstHalf(byte[] rgba, int width, int height, out byte[] outRgba, out int outWidth, out int outHeight)
+		{
+			int halfW = Math.Max(1, width / 2);
+			outWidth = halfW;
+			outHeight = height;
+			outRgba = new byte[halfW * height * 4];
+			int srcRowBytes = width * 4;
+			int dstRowBytes = halfW * 4;
+			for (int y = 0; y < height; y++)
+				Buffer.BlockCopy(rgba, y * srcRowBytes, outRgba, y * dstRowBytes, dstRowBytes);
+		}
+
+		/// <summary>Scale RGBA so longest side is TARGET_MAX_SIZE. Preserves aspect ratio.</summary>
+		static void ScaleToTargetSize(ref byte[] rgba, ref int width, ref int height)
+		{
+			int maxSide = Math.Max(width, height);
+			if (maxSide <= 0 || maxSide == TARGET_MAX_SIZE) return;
+			double scale = (double)TARGET_MAX_SIZE / maxSide;
+			int newW = Math.Max(1, (int)Math.Round(width * scale));
+			int newH = Math.Max(1, (int)Math.Round(height * scale));
+			using (var src = new Bitmap(width, height, PixelFormat.Format32bppArgb))
+			{
+				var bd = src.LockBits(new Rectangle(0, 0, width, height), ImageLockMode.WriteOnly, PixelFormat.Format32bppArgb);
+				int rowBytes = width * 4;
+				for (int y = 0; y < height; y++)
+					Marshal.Copy(rgba, y * rowBytes, IntPtr.Add(bd.Scan0, y * bd.Stride), rowBytes);
+				src.UnlockBits(bd);
+				using (var dst = new Bitmap(newW, newH, PixelFormat.Format32bppArgb))
+				using (var g = Graphics.FromImage(dst))
+				{
+					g.InterpolationMode = InterpolationMode.HighQualityBicubic;
+					g.SmoothingMode = SmoothingMode.HighQuality;
+					g.PixelOffsetMode = PixelOffsetMode.HighQuality;
+					g.DrawImage(src, 0, 0, newW, newH);
+					var dstBd = dst.LockBits(new Rectangle(0, 0, newW, newH), ImageLockMode.ReadOnly, PixelFormat.Format32bppArgb);
+					rgba = new byte[newW * newH * 4];
+					for (int y = 0; y < newH; y++)
+						Marshal.Copy(IntPtr.Add(dstBd.Scan0, y * dstBd.Stride), rgba, y * newW * 4, newW * 4);
+					dst.UnlockBits(dstBd);
+				}
+			}
+			width = newW;
+			height = newH;
 		}
 
 		static void WritePng(string path, int width, int height, byte[] rgba)

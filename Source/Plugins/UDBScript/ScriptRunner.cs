@@ -385,7 +385,10 @@ namespace CodeImp.DoomBuilder.UDBScript
 			// Tell the mode that a script is about to be run
 			General.Editing.Mode.OnScriptRunBegin();
 
-			General.Map.UndoRedo.CreateUndo("Run script " + scriptinfo.Name);
+			// OASIS STAR Place Selected only creates an undo when the user actually places on the map
+			bool skipRunUndo = scriptinfo.ScriptFile != null && scriptinfo.ScriptFile.IndexOf("OASIS_STAR_Place_Selected", StringComparison.OrdinalIgnoreCase) >= 0;
+			if (!skipRunUndo)
+				General.Map.UndoRedo.CreateUndo("Run script " + scriptinfo.Name);
 			General.Map.Map.ClearAllMarks(false);
 
 			General.Map.Map.IsSafeToAccess = false;
