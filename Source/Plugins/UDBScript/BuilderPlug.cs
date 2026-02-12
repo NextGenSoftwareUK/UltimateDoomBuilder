@@ -1191,6 +1191,7 @@ namespace CodeImp.DoomBuilder.UDBScript
 			return value.Replace("\\\"", "\"").Replace("\\\\", "\\");
 		}
 
+
 		private static List<string> GetOasisStarScriptCandidates(string fileName)
 		{
 			var candidates = new List<string>

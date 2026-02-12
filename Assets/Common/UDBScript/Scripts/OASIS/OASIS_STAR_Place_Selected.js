@@ -4,7 +4,7 @@
 
 `#name OASIS STAR - Place selected asset at cursor`;
 
-`#description Select the asset from the list, click OK, then click on the map where you want to place it. OASIS STAR: same keys/items work in Doom and OQuake (collect in one, use in the other).`;
+`#description Place any ODOOM or OQUAKE asset at mouse (keycards, monsters, weapons, health, ammo). Choose game first, then choose an asset filtered by game.`;
 
 // [game, category, id, name, placementType]
 // placementType = thing type written to map. Globally unique: ODOOM = Doom type, OQUAKE = unique 5xxx/53xx/3010/3011.
@@ -79,24 +79,43 @@ var ASSETS = [
     ["OQUAKE", "monster", "spawn", "Spawn", 5368]
 ];
 
-var choiceList = ASSETS.map(function(a) { return a[0] + " – " + a[3]; });
-var q = new UDB.QueryOptions();
-q.addOption("asset", "Asset to place", 11, choiceList[0], choiceList);
-if (!q.query()) return;
+var gameList = ["ODOOM", "OQUAKE"];
+var qGame = new UDB.QueryOptions();
+qGame.addOption("game", "Game", 0, gameList[0], gameList);
+if (!qGame.query()) return;
+
+var selectedGame = qGame.options.game;
+if (typeof selectedGame === "string" && /^[0-9]+$/.test(selectedGame))
+    selectedGame = gameList[parseInt(selectedGame, 10)] || gameList[0];
+if (typeof selectedGame === "number")
+    selectedGame = gameList[selectedGame] || gameList[0];
+if (gameList.indexOf(selectedGame) < 0)
+    selectedGame = gameList[0];
+
+var filtered = ASSETS.filter(function(a) { return a[0] === selectedGame; });
+if (filtered.length === 0) { UDB.log("OASIS STAR: No assets found for " + selectedGame + "."); return; }
+
+var choiceList = filtered.map(function(a) { return a[3] + " (" + a[4] + ")"; });
+var qAsset = new UDB.QueryOptions();
+qAsset.addOption("asset", "Asset to place", 0, choiceList[0], choiceList);
+if (!qAsset.query()) return;
 var idx = -1;
-if (typeof q.options.asset === 'number' && q.options.asset >= 0 && q.options.asset < choiceList.length) {
-    idx = q.options.asset;
+if (typeof qAsset.options.asset === "string" && /^[0-9]+$/.test(qAsset.options.asset)) {
+    idx = parseInt(qAsset.options.asset, 10);
+} else if (typeof qAsset.options.asset === "number") {
+    idx = qAsset.options.asset;
 } else {
-    idx = choiceList.indexOf(q.options.asset);
+    idx = choiceList.indexOf(qAsset.options.asset);
 }
 if (idx < 0) { UDB.log("OASIS STAR: Invalid selection."); return; }
-var row = ASSETS[idx];
+var row = filtered[idx];
 if (typeof UDB.setPendingStarPlacement !== "function") {
     UDB.log("OASIS STAR: setPendingStarPlacement not available. Update UDBScript plugin.");
     return;
 }
 UDB.setPendingStarPlacement(row[4], row[3]);
-UDB.log("OASIS STAR: Selected " + row[3] + " (type " + row[4] + "). Click on the map to place.");
+UDB.log("OASIS STAR: Selected " + row[3] + " (" + selectedGame + ", type " + row[4] + "). Click on the map to place.");
+
 
 
 
