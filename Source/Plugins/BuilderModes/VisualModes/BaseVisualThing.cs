@@ -327,6 +327,9 @@ namespace CodeImp.DoomBuilder.BuilderModes
 
 			// OASIS sprite override (e.g. OQUAKE): scale so 3D billboard matches 2D view; unknown thing type has small radius so quad would be tiny
 			bool useOasisOverride = (General.GetThingSpriteOverride(Thing.Type) != null);
+			bool isOasisKey = (Thing.Type == 5005 || Thing.Type == 5013);
+			bool isOasisDog = (Thing.Type == 3010);
+			bool isOasisMonster = IsOasisMonsterType(Thing.Type);
 			if(useOasisOverride)
 			{
 				// Keep OASIS display-pack sprites readable in 3D regardless of sector lighting/fog.
@@ -337,8 +340,14 @@ namespace CodeImp.DoomBuilder.BuilderModes
 			}
 			const float OASIS_3D_SIZE_MULTIPLIER = 1f;
 			const float OASIS_MIN_SIZE = 24f;
-			const float OASIS_TARGET_HEIGHT = 12f;
-			const float OASIS_MAX_WIDTH = 10f;
+			const float OASIS_TARGET_HEIGHT_KEYS = 12f;
+			const float OASIS_MAX_WIDTH_KEYS = 10f;
+			const float OASIS_TARGET_HEIGHT_DOG = 23f;
+			const float OASIS_MAX_WIDTH_DOG = 24f;
+			const float OASIS_TARGET_HEIGHT_MONSTERS = 45f;
+			const float OASIS_MAX_WIDTH_MONSTERS = 48f;
+			const float OASIS_TARGET_HEIGHT_NONKEYS = 36f;
+			const float OASIS_MAX_WIDTH_NONKEYS = 40f;
 
 			for(int i = 0; i < sprites.Length; i++)
 			{
@@ -368,6 +377,28 @@ namespace CodeImp.DoomBuilder.BuilderModes
 					// OASIS override: scale billboard so it matches 2D view size; keep within sane 3D bounds
 					if(useOasisOverride)
 					{
+						float oasisTargetHeight;
+						float oasisMaxWidth;
+						if(isOasisKey)
+						{
+							oasisTargetHeight = OASIS_TARGET_HEIGHT_KEYS;
+							oasisMaxWidth = OASIS_MAX_WIDTH_KEYS;
+						}
+						else if(isOasisDog)
+						{
+							oasisTargetHeight = OASIS_TARGET_HEIGHT_DOG;
+							oasisMaxWidth = OASIS_MAX_WIDTH_DOG;
+						}
+						else if(isOasisMonster)
+						{
+							oasisTargetHeight = OASIS_TARGET_HEIGHT_MONSTERS;
+							oasisMaxWidth = OASIS_MAX_WIDTH_MONSTERS;
+						}
+						else
+						{
+							oasisTargetHeight = OASIS_TARGET_HEIGHT_NONKEYS;
+							oasisMaxWidth = OASIS_MAX_WIDTH_NONKEYS;
+						}
 						radius *= OASIS_3D_SIZE_MULTIPLIER;
 						height *= OASIS_3D_SIZE_MULTIPLIER;
 						offsets.x *= OASIS_3D_SIZE_MULTIPLIER;
@@ -377,12 +408,12 @@ namespace CodeImp.DoomBuilder.BuilderModes
 						// Deterministic OASIS 3D scale: normalize to target height, clamp width.
 						if(height > 0.001f)
 						{
-							float s = OASIS_TARGET_HEIGHT / height;
+							float s = oasisTargetHeight / height;
 							radius *= s;
-							height = OASIS_TARGET_HEIGHT;
+							height = oasisTargetHeight;
 						}
-						if(radius * 2f > OASIS_MAX_WIDTH)
-							radius = OASIS_MAX_WIDTH * 0.5f;
+						if(radius * 2f > oasisMaxWidth)
+							radius = oasisMaxWidth * 0.5f;
 						// OASIS external PNGs don't carry Doom sprite offsets. Anchor to center/floor in 3D.
 						offsets.x = 0f;
 						offsets.y = 0f;
@@ -554,6 +585,26 @@ namespace CodeImp.DoomBuilder.BuilderModes
 			// Done
 			changed = false;
 			return true;
+		}
+
+		private static bool IsOasisMonsterType(int thingType)
+		{
+			switch(thingType)
+			{
+				case 3010: // dog
+				case 3011: // zombie
+				case 5302: // demon
+				case 5303: // shambler
+				case 5304: // soldier
+				case 5305: // fish
+				case 5309: // ogre
+				case 5366: // wizard
+				case 5368: // spawn (tarbaby)
+				case 5369: // knight
+					return true;
+				default:
+					return false;
+			}
 		}
 		
 		// Disposing

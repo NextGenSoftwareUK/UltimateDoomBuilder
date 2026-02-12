@@ -9,6 +9,8 @@ using System.Drawing.Drawing2D;
 using System.Drawing.Imaging;
 using System.IO;
 using System.Runtime.InteropServices;
+using System.Text.RegularExpressions;
+using Microsoft.Win32;
 
 namespace ExtractOquakeSprites
 {
@@ -48,7 +50,7 @@ namespace ExtractOquakeSprites
 			("progs/wizard.mdl", 5366),
 			("progs/dog.mdl", 3010),
 			("progs/fish.mdl", 5305),
-			("progs/spawn.mdl", 5368),
+			("progs/tarbaby.mdl", 5368),
 		};
 		// Health: reuse armor sprite if no health model in pak
 		static readonly List<(string model, int uniqueType)> ModelToUniqueTypeHealth = new List<(string, int)>
@@ -80,50 +82,62 @@ namespace ExtractOquakeSprites
 			Console.WriteLine("  palette: fallback (grayscale)");
 		}
 
-		// Target longest side in pixels for editor/runtime-friendly sprite sizes.
-		// 64 keeps OQUAKE keys/items close to Doom sprite scale instead of oversized 1024px outputs.
-		const int TARGET_MAX_SIZE = 64;
+		// Per-type target longest side:
+		// - Keys stay compact in editor/runtime.
+		// - Non-key OQUAKE content (especially monsters) is much larger for visibility and quality.
+		const int TARGET_MAX_SIZE_KEYS = 64;
+		const int TARGET_MAX_SIZE_NON_KEYS = 1024;
 
 		static int Main(string[] args)
 		{
 			bool listOnly = args.Length > 0 && string.Equals(args[0], "--list", StringComparison.OrdinalIgnoreCase);
 			int argStart = listOnly ? 1 : 0;
-			string id1Path = args.Length > argStart ? args[argStart] : @"C:\Source\vkQuake\id1";
+			string id1Path = args.Length > argStart ? args[argStart] : ResolveDefaultId1Path();
 			string outPath = args.Length > argStart + 1 ? args[argStart + 1] : Path.Combine(
 				Path.GetDirectoryName(System.Reflection.Assembly.GetExecutingAssembly().Location),
 				"..", "..", "..", "..", "Assets", "Common", "UDBScript", "Scripts", "OASIS", "Sprites");
 
 			outPath = Path.GetFullPath(outPath);
-			string pakPath = Path.Combine(id1Path, "pak0.pak");
+			string pak0Path = Path.Combine(id1Path, "pak0.pak");
+			string pak1Path = Path.Combine(id1Path, "pak1.pak");
 
 			Console.WriteLine("OQUAKE sprite extractor");
 			Console.WriteLine("  id1 path: " + id1Path);
 			Console.WriteLine("  output:   " + outPath);
-			if (!File.Exists(pakPath))
+			if (!File.Exists(pak0Path) && !File.Exists(pak1Path))
 			{
-				Console.WriteLine("ERROR: pak0.pak not found at " + pakPath);
-				Console.WriteLine("Place your Quake 1 id1 folder (containing pak0.pak) at " + id1Path + " or pass path as first argument.");
+				Console.WriteLine("ERROR: No pak files found at " + id1Path);
+				Console.WriteLine("Auto-detect checked Steam libraries and fallback paths.");
+				Console.WriteLine("Expected at least one of pak0.pak or pak1.pak.");
 				return 1;
 			}
 			Directory.CreateDirectory(outPath);
 
-			var pak = new PakFile(pakPath);
-			int dirCount = pak.GetEntryCount();
+			var paks = new List<PakFile>();
+			if (File.Exists(pak0Path)) paks.Add(new PakFile(pak0Path));
+			if (File.Exists(pak1Path)) paks.Add(new PakFile(pak1Path));
+			int dirCount = 0;
+			foreach (var p in paks) dirCount += p.GetEntryCount();
 			if (dirCount == 0)
 			{
-				Console.WriteLine("ERROR: pak directory is empty or wrong format. Is " + pakPath + " a valid Quake 1 pak0.pak?");
+				Console.WriteLine("ERROR: pak directory is empty or wrong format.");
 				return 1;
 			}
+			Console.WriteLine("  pak files:  " + paks.Count + " (" + (File.Exists(pak0Path) ? "pak0 " : "") + (File.Exists(pak1Path) ? "pak1" : "") + ")");
 			Console.WriteLine("  pak entries: " + dirCount);
 			if (listOnly)
 			{
-				foreach (var p in pak.ListProgsMdl())
-					Console.WriteLine(p);
+				var listed = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+				foreach (var pak in paks)
+					foreach (var p in pak.ListProgsMdl())
+						if (listed.Add(p)) Console.WriteLine(p);
 				return 0;
 			}
 
-			LoadQuakePalette(pak);
-			Console.WriteLine("  scale: longest side " + TARGET_MAX_SIZE + " px (match Doom sprite size)");
+			// Prefer palette from pak0, fallback to first available pak.
+			var palettePak = paks.Find(pp => pp.HasEntry("gfx/palette.lmp")) ?? paks[0];
+			LoadQuakePalette(palettePak);
+			Console.WriteLine("  scale: keys=" + TARGET_MAX_SIZE_KEYS + "px, non-keys=" + TARGET_MAX_SIZE_NON_KEYS + "px longest side");
 			string spritesFullPath = Path.Combine(Path.GetDirectoryName(outPath), "SpritesFull");
 			Directory.CreateDirectory(spritesFullPath);
 			Console.WriteLine("  Sprites (editor): front half only -> " + outPath);
@@ -138,7 +152,7 @@ namespace ExtractOquakeSprites
 			{
 				string pakName = entry.model.Replace('\\', '/');
 				int uniqueType = entry.uniqueType;
-				byte[] mdlData = pak.ReadFile(pakName);
+				byte[] mdlData = ReadFileFromPaks(paks, pakName);
 				if (mdlData == null)
 				{
 					Console.WriteLine("  skip " + pakName + " (type " + uniqueType + "): not in pak");
@@ -167,20 +181,114 @@ namespace ExtractOquakeSprites
 				}
 				int fullW = w, fullH = h;
 				byte[] fullRgba = skinRgba;
-				ScaleToTargetSize(ref fullRgba, ref fullW, ref fullH);
-				PrepareSpriteAlpha(ref fullRgba, fullW, fullH);
+				int targetMaxSize = IsCompactKeyType(uniqueType) ? TARGET_MAX_SIZE_KEYS : TARGET_MAX_SIZE_NON_KEYS;
+				ScaleToTargetSize(ref fullRgba, ref fullW, ref fullH, targetMaxSize);
+				if (IsCompactKeyType(uniqueType))
+					PrepareSpriteAlpha(ref fullRgba, fullW, fullH);
+				else
+					RemoveBorderConnectedBackground(fullRgba, fullW, fullH);
 				// Save full image to SpritesFull
 				WritePng(Path.Combine(spritesFullPath, uniqueType + ".png"), fullW, fullH, fullRgba);
 				// Crop to first half (front side) for editor Sprites folder
 				byte[] frontRgba; int frontW, frontH;
 				CropToFirstHalf(fullRgba, fullW, fullH, out frontRgba, out frontW, out frontH);
-				PrepareSpriteAlpha(ref frontRgba, frontW, frontH);
+				if (IsCompactKeyType(uniqueType))
+					PrepareSpriteAlpha(ref frontRgba, frontW, frontH);
+				else
+					RemoveBorderConnectedBackground(frontRgba, frontW, frontH);
 				WritePng(Path.Combine(outPath, uniqueType + ".png"), frontW, frontH, frontRgba);
-				Console.WriteLine("  " + pakName + " " + w + "x" + h + " -> " + uniqueType + ".png (front " + frontW + "x" + frontH + ", full " + fullW + "x" + fullH + ")");
+				Console.WriteLine("  " + pakName + " " + w + "x" + h + " -> " + uniqueType + ".png (target " + targetMaxSize + ", front " + frontW + "x" + frontH + ", full " + fullW + "x" + fullH + ")");
 				count++;
 			}
 			Console.WriteLine("Done. Wrote " + count + " front-half sprites to " + outPath + ", " + count + " full to " + spritesFullPath);
 			return 0;
+		}
+
+		static string ResolveDefaultId1Path()
+		{
+			// Keep explicit local dev path as final fallback.
+			const string fallback = @"C:\Source\vkQuake\id1";
+			var seen = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+			var candidates = new List<string>();
+
+			Action<string> add = p =>
+			{
+				if (string.IsNullOrWhiteSpace(p)) return;
+				try
+				{
+					string full = Path.GetFullPath(p.Trim().Trim('"'));
+					if (seen.Add(full)) candidates.Add(full);
+				}
+				catch { }
+			};
+
+			// 1) Direct id1 candidates from common Steam install locations.
+			add(@"C:\Program Files (x86)\Steam\steamapps\common\Quake\id1");
+			add(@"C:\Program Files (x86)\Steam\steamapps\common\Quake\rerelease\id1");
+
+			// 2) SteamPath from env and registry.
+			string steamPath = Environment.GetEnvironmentVariable("STEAM_PATH");
+			if (string.IsNullOrWhiteSpace(steamPath))
+				steamPath = Environment.GetEnvironmentVariable("SteamPath");
+
+			if (string.IsNullOrWhiteSpace(steamPath))
+			{
+				try
+				{
+					using (RegistryKey k = Registry.CurrentUser.OpenSubKey(@"Software\Valve\Steam"))
+						steamPath = k != null ? (k.GetValue("SteamPath") as string) : null;
+				}
+				catch { }
+			}
+
+			if (!string.IsNullOrWhiteSpace(steamPath))
+			{
+				string common = Path.Combine(steamPath, "steamapps", "common");
+				add(Path.Combine(common, "Quake", "id1"));
+				add(Path.Combine(common, "Quake", "rerelease", "id1"));
+			}
+
+			// 3) Parse all Steam library paths from libraryfolders.vdf.
+			string libraryFoldersVdf = null;
+			if (!string.IsNullOrWhiteSpace(steamPath))
+				libraryFoldersVdf = Path.Combine(steamPath, "steamapps", "libraryfolders.vdf");
+			else
+				libraryFoldersVdf = @"C:\Program Files (x86)\Steam\steamapps\libraryfolders.vdf";
+
+			if (File.Exists(libraryFoldersVdf))
+			{
+				try
+				{
+					string vdf = File.ReadAllText(libraryFoldersVdf);
+					foreach (Match m in Regex.Matches(vdf, "\"path\"\\s+\"([^\"]+)\"", RegexOptions.IgnoreCase))
+					{
+						string libRoot = m.Groups[1].Value.Replace(@"\\", @"\");
+						string common = Path.Combine(libRoot, "steamapps", "common");
+						add(Path.Combine(common, "Quake", "id1"));
+						add(Path.Combine(common, "Quake", "rerelease", "id1"));
+					}
+				}
+				catch { }
+			}
+
+			// 4) Return first candidate that has a pak file.
+			foreach (string c in candidates)
+			{
+				if (File.Exists(Path.Combine(c, "pak0.pak")) || File.Exists(Path.Combine(c, "pak1.pak")))
+					return c;
+			}
+
+			return fallback;
+		}
+
+		static byte[] ReadFileFromPaks(List<PakFile> paks, string name)
+		{
+			foreach (var pak in paks)
+			{
+				byte[] data = pak.ReadFile(name);
+				if (data != null) return data;
+			}
+			return null;
 		}
 
 		static byte[] ExtractFirstSkin(byte[] mdl, out string failReason)
@@ -243,12 +351,18 @@ namespace ExtractOquakeSprites
 				Buffer.BlockCopy(rgba, y * srcRowBytes, outRgba, y * dstRowBytes, dstRowBytes);
 		}
 
-		/// <summary>Scale RGBA so longest side is TARGET_MAX_SIZE. Preserves aspect ratio.</summary>
-		static void ScaleToTargetSize(ref byte[] rgba, ref int width, ref int height)
+		static bool IsCompactKeyType(int uniqueType)
 		{
+			return uniqueType == 5005 || uniqueType == 5013;
+		}
+
+		/// <summary>Scale RGBA so longest side is targetMaxSide. Preserves aspect ratio.</summary>
+		static void ScaleToTargetSize(ref byte[] rgba, ref int width, ref int height, int targetMaxSide)
+		{
+			if (targetMaxSide <= 0) return;
 			int maxSide = Math.Max(width, height);
-			if (maxSide <= 0 || maxSide == TARGET_MAX_SIZE) return;
-			double scale = (double)TARGET_MAX_SIZE / maxSide;
+			if (maxSide <= 0 || maxSide == targetMaxSide) return;
+			double scale = (double)targetMaxSide / maxSide;
 			int newW = Math.Max(1, (int)Math.Round(width * scale));
 			int newH = Math.Max(1, (int)Math.Round(height * scale));
 			using (var src = new Bitmap(width, height, PixelFormat.Format32bppArgb))
@@ -362,6 +476,77 @@ namespace ExtractOquakeSprites
 			}
 		}
 
+		/// <summary>
+		/// Conservative cleanup for non-key sprites:
+		/// remove border-connected pixels matching corner/background colors (including blue/black),
+		/// without alpha remapping to avoid detail corruption.
+		/// </summary>
+		static void RemoveBorderConnectedBackground(byte[] rgba, int width, int height)
+		{
+			if (rgba == null || width <= 0 || height <= 0) return;
+			int pixels = width * height;
+			if (pixels <= 0) return;
+
+			// Estimate likely background colors from the four corners (BGRA layout).
+			int[,] corners = new int[,] { { 0, 0 }, { width - 1, 0 }, { 0, height - 1 }, { width - 1, height - 1 } };
+			var bgColors = new List<(int r, int g, int b)>(4);
+			for (int i = 0; i < 4; i++)
+			{
+				int x = corners[i, 0], y = corners[i, 1];
+				int p = (y * width + x) * 4;
+				if (rgba[p + 3] == 0) continue;
+				bgColors.Add((rgba[p + 2], rgba[p + 1], rgba[p]));
+			}
+			if (bgColors.Count == 0) return;
+
+			const int MAX_BG_DIST = 48;   // distance to any corner bg color
+			const int MAX_DARK_LUMA = 58; // catches near-black boxes
+			bool[] visited = new bool[pixels];
+			var qx = new Queue<int>();
+			var qy = new Queue<int>();
+
+			Action<int, int> tryEnqueue = (xx, yy) =>
+			{
+				if (xx < 0 || yy < 0 || xx >= width || yy >= height) return;
+				int idx = yy * width + xx;
+				if (visited[idx]) return;
+				int p = idx * 4;
+				if (rgba[p + 3] == 0) return;
+				int r = rgba[p + 2], g = rgba[p + 1], b = rgba[p];
+				int luma = (r * 77 + g * 150 + b * 29) >> 8;
+				bool darkCandidate = (luma <= MAX_DARK_LUMA);
+
+				int minDist = int.MaxValue;
+				for (int i = 0; i < bgColors.Count; i++)
+				{
+					var c = bgColors[i];
+					int d = Math.Abs(r - c.r) + Math.Abs(g - c.g) + Math.Abs(b - c.b);
+					if (d < minDist) minDist = d;
+				}
+				bool cornerColorCandidate = (minDist <= MAX_BG_DIST);
+				if (!darkCandidate && !cornerColorCandidate) return;
+				visited[idx] = true;
+				qx.Enqueue(xx);
+				qy.Enqueue(yy);
+			};
+
+			for (int x = 0; x < width; x++) { tryEnqueue(x, 0); tryEnqueue(x, height - 1); }
+			for (int y = 1; y < height - 1; y++) { tryEnqueue(0, y); tryEnqueue(width - 1, y); }
+
+			while (qx.Count > 0)
+			{
+				int x = qx.Dequeue();
+				int y = qy.Dequeue();
+				int p = (y * width + x) * 4;
+				rgba[p + 3] = 0;
+
+				tryEnqueue(x - 1, y);
+				tryEnqueue(x + 1, y);
+				tryEnqueue(x, y - 1);
+				tryEnqueue(x, y + 1);
+			}
+		}
+
 		static void WritePng(string path, int width, int height, byte[] rgba)
 		{
 			using (var bmp = new Bitmap(width, height, PixelFormat.Format32bppArgb))
@@ -416,6 +601,12 @@ namespace ExtractOquakeSprites
 					fs.Read(data, 0, data.Length);
 					return data;
 				}
+			}
+
+			public bool HasEntry(string name)
+			{
+				name = name.Replace('\\', '/');
+				return _dir.ContainsKey(name);
 			}
 
 			public System.Collections.Generic.IEnumerable<string> ListProgsMdl()

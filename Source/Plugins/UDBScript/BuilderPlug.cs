@@ -82,11 +82,18 @@ namespace CodeImp.DoomBuilder.UDBScript
 		private static readonly string OASIS_SPRITES_FOLDER = "Sprites"; // UDBScript/Scripts/OASIS/Sprites (thing type PNGs)
 		/// <summary>OQUAKE/OASIS unique thing types start at 5000; only these get display-pack overrides (avoid looking for 1.png etc.).</summary>
 		private const int OASIS_THING_TYPE_MIN = 5000;
+		// OQUAKE compatibility: these monster ids are intentionally below 5000.
+		private static readonly HashSet<int> OASIS_LEGACY_THING_TYPES = new HashSet<int> { 3010, 3011 };
 		public static readonly uint UDB_SCRIPT_VERSION = 5;
 
 		#endregion
 
 		private delegate void CallVoidMethodDeletage();
+
+		private static bool IsOasisThingTypeForOverrides(int thingType)
+		{
+			return thingType >= OASIS_THING_TYPE_MIN || OASIS_LEGACY_THING_TYPES.Contains(thingType);
+		}
 
 		#region ================== Constants
 
@@ -923,8 +930,8 @@ namespace CodeImp.DoomBuilder.UDBScript
 		/// </summary>
 		public override ImageData GetThingSpriteOverride(int thingType)
 		{
-			// Only OASIS/OQUAKE types (5000+) have display-pack PNGs; skip lookup and warning for standard Doom things (e.g. type 1)
-			if (thingType < OASIS_THING_TYPE_MIN)
+			// Only OASIS/OQUAKE types use display-pack PNGs; skip normal Doom things.
+			if (!IsOasisThingTypeForOverrides(thingType))
 				return null;
 			lock (thingSpriteOverrideLock)
 			{
@@ -999,81 +1006,85 @@ namespace CodeImp.DoomBuilder.UDBScript
 				using (Bitmap fromFile = (Bitmap)Image.FromFile(pathByType))
 				{
 					Bitmap prepared = new Bitmap(fromFile);
-					// Normalize alpha for external OASIS sprites:
-					// some generated PNGs have alpha in range [N..255] (never reaching 0),
-					// which renders as a full rectangular slab in 3D. Remap min alpha to 0.
-					byte minA = 255;
-					byte maxA = 0;
-					for (int y = 0; y < prepared.Height; y++)
+					// Key-only alpha cleanup (5005/5013). Non-key sprites must stay unfiltered.
+					bool applyKeyAlphaProcessing = (thingType == 5005 || thingType == 5013);
+					if (applyKeyAlphaProcessing)
 					{
-						for (int x = 0; x < prepared.Width; x++)
-						{
-							byte a = prepared.GetPixel(x, y).A;
-							if (a < minA) minA = a;
-							if (a > maxA) maxA = a;
-						}
-					}
-					if (minA > 0 && maxA > minA)
-					{
-						int denom = maxA - minA;
+						// Normalize alpha for external OASIS key sprites:
+						// some generated PNGs have alpha in range [N..255] (never reaching 0),
+						// which renders as a full rectangular slab in 3D. Remap min alpha to 0.
+						byte minA = 255;
+						byte maxA = 0;
 						for (int y = 0; y < prepared.Height; y++)
 						{
 							for (int x = 0; x < prepared.Width; x++)
 							{
-								Color c = prepared.GetPixel(x, y);
-								int na = ((c.A - minA) * 255) / denom;
-								if (na < 8) na = 0; // snap tiny fringe to transparent
-								prepared.SetPixel(x, y, Color.FromArgb(na, c.R, c.G, c.B));
+								byte a = prepared.GetPixel(x, y).A;
+								if (a < minA) minA = a;
+								if (a > maxA) maxA = a;
 							}
 						}
-					}
-					// Remove flat square background by flood-filling from image borders using border-color similarity.
-					// This preserves interior pixels even if they are similar to background, as long as not border-connected.
-					int bw = prepared.Width;
-					int bh = prepared.Height;
-					if (bw > 2 && bh > 2)
-					{
-						long sumR = 0, sumG = 0, sumB = 0, bcount = 0;
-						for (int x = 0; x < bw; x++)
+						if (minA > 0 && maxA > minA)
 						{
-							Color ct = prepared.GetPixel(x, 0);
-							Color cb = prepared.GetPixel(x, bh - 1);
-							sumR += ct.R + cb.R; sumG += ct.G + cb.G; sumB += ct.B + cb.B; bcount += 2;
+							int denom = maxA - minA;
+							for (int y = 0; y < prepared.Height; y++)
+							{
+								for (int x = 0; x < prepared.Width; x++)
+								{
+									Color c = prepared.GetPixel(x, y);
+									int na = ((c.A - minA) * 255) / denom;
+									if (na < 8) na = 0; // snap tiny fringe to transparent
+									prepared.SetPixel(x, y, Color.FromArgb(na, c.R, c.G, c.B));
+								}
+							}
 						}
-						for (int y = 1; y < bh - 1; y++)
+						// Remove flat square background by flood-filling from image borders using border-color similarity.
+						int bw = prepared.Width;
+						int bh = prepared.Height;
+						if (bw > 2 && bh > 2)
 						{
-							Color cl = prepared.GetPixel(0, y);
-							Color cr = prepared.GetPixel(bw - 1, y);
-							sumR += cl.R + cr.R; sumG += cl.G + cr.G; sumB += cl.B + cr.B; bcount += 2;
-						}
-						Color bg = Color.FromArgb((int)(sumR / bcount), (int)(sumG / bcount), (int)(sumB / bcount));
-						const int BG_TOL = 42; // Manhattan RGB distance threshold
+							long sumR = 0, sumG = 0, sumB = 0, bcount = 0;
+							for (int x = 0; x < bw; x++)
+							{
+								Color ct = prepared.GetPixel(x, 0);
+								Color cb = prepared.GetPixel(x, bh - 1);
+								sumR += ct.R + cb.R; sumG += ct.G + cb.G; sumB += ct.B + cb.B; bcount += 2;
+							}
+							for (int y = 1; y < bh - 1; y++)
+							{
+								Color cl = prepared.GetPixel(0, y);
+								Color cr = prepared.GetPixel(bw - 1, y);
+								sumR += cl.R + cr.R; sumG += cl.G + cr.G; sumB += cl.B + cr.B; bcount += 2;
+							}
+							Color bg = Color.FromArgb((int)(sumR / bcount), (int)(sumG / bcount), (int)(sumB / bcount));
+							const int BG_TOL = 42; // Manhattan RGB distance threshold
 
-						bool[,] visited = new bool[bw, bh];
-						Queue<Point> q = new Queue<Point>();
-						Action<int, int> enqueue = (xx, yy) =>
-						{
-							if (xx < 0 || yy < 0 || xx >= bw || yy >= bh) return;
-							if (visited[xx, yy]) return;
-							visited[xx, yy] = true;
-							q.Enqueue(new Point(xx, yy));
-						};
+							bool[,] visited = new bool[bw, bh];
+							Queue<Point> q = new Queue<Point>();
+							Action<int, int> enqueue = (xx, yy) =>
+							{
+								if (xx < 0 || yy < 0 || xx >= bw || yy >= bh) return;
+								if (visited[xx, yy]) return;
+								visited[xx, yy] = true;
+								q.Enqueue(new Point(xx, yy));
+							};
 
-						for (int x = 0; x < bw; x++) { enqueue(x, 0); enqueue(x, bh - 1); }
-						for (int y = 1; y < bh - 1; y++) { enqueue(0, y); enqueue(bw - 1, y); }
+							for (int x = 0; x < bw; x++) { enqueue(x, 0); enqueue(x, bh - 1); }
+							for (int y = 1; y < bh - 1; y++) { enqueue(0, y); enqueue(bw - 1, y); }
 
-						while (q.Count > 0)
-						{
-							Point pnt = q.Dequeue();
-							Color c = prepared.GetPixel(pnt.X, pnt.Y);
-							if (c.A == 0) continue;
-							int dist = Math.Abs(c.R - bg.R) + Math.Abs(c.G - bg.G) + Math.Abs(c.B - bg.B);
-							if (dist > BG_TOL) continue;
-							prepared.SetPixel(pnt.X, pnt.Y, Color.FromArgb(0, c.R, c.G, c.B));
-							enqueue(pnt.X - 1, pnt.Y);
-							enqueue(pnt.X + 1, pnt.Y);
-							enqueue(pnt.X, pnt.Y - 1);
-							enqueue(pnt.X, pnt.Y + 1);
+							while (q.Count > 0)
+							{
+								Point pnt = q.Dequeue();
+								Color c = prepared.GetPixel(pnt.X, pnt.Y);
+								if (c.A == 0) continue;
+								int dist = Math.Abs(c.R - bg.R) + Math.Abs(c.G - bg.G) + Math.Abs(c.B - bg.B);
+								if (dist > BG_TOL) continue;
+								prepared.SetPixel(pnt.X, pnt.Y, Color.FromArgb(0, c.R, c.G, c.B));
+								enqueue(pnt.X - 1, pnt.Y);
+								enqueue(pnt.X + 1, pnt.Y);
+								enqueue(pnt.X, pnt.Y - 1);
+								enqueue(pnt.X, pnt.Y + 1);
+							}
 						}
 					}
 
@@ -1096,7 +1107,7 @@ namespace CodeImp.DoomBuilder.UDBScript
 		public override bool TryGetThingInfoOverride(int thingType, out KeyValuePair<string, string> thingInfo)
 		{
 			thingInfo = new KeyValuePair<string, string>();
-			if(thingType < OASIS_THING_TYPE_MIN)
+			if(!IsOasisThingTypeForOverrides(thingType))
 				return false;
 
 			EnsureOasisThingInfoOverridesLoaded();
