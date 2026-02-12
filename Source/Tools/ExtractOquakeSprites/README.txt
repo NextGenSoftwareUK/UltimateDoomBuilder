@@ -6,6 +6,11 @@ progs/*.mdl models, and writes PNGs named by Doom thing type into the UDB
 OASIS Sprites folder. The editor then uses these for OQUAKE assets (keys,
 weapons, health, armor, ammo, monsters).
 
+Current output behavior:
+  - Scales sprites to a 64px max side (Doom-like size, avoids oversized keys)
+  - Removes border-connected flat backgrounds
+  - Normalizes alpha so masked rendering behaves correctly in-game/editor
+
 REQUIREMENTS
   - Quake 1 game data: a folder containing pak0.pak (e.g. from Steam, GOG,
     or a full Quake 1 install). The folder is usually named "id1".
@@ -26,6 +31,7 @@ EXAMPLES
 
 After running, open your map in Ultimate Doom Builder; OQUAKE thing types
 that have a PNG in the Sprites folder will show the Quake sprite in 2D/3D.
+
 
 
 

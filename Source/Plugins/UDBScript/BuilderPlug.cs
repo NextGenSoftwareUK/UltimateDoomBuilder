@@ -1145,7 +1145,7 @@ namespace CodeImp.DoomBuilder.UDBScript
 		private void LoadOasisThingInfoOverridesFromScript(string scriptPath)
 		{
 			string script = File.ReadAllText(scriptPath);
-			Regex rowRegex = new Regex(@"\[\s*""[^""]+""\s*,\s*""[^""]+""\s*,\s*""([^""]+)""\s*,\s*""([^""]+)""\s*,\s*(\d+)\s*\]", RegexOptions.Compiled);
+			Regex rowRegex = new Regex(@"\[\s*""([^""]+)""\s*,\s*""[^""]+""\s*,\s*""([^""]+)""\s*,\s*""([^""]+)""\s*,\s*(\d+)\s*\]", RegexOptions.Compiled);
 			MatchCollection matches = rowRegex.Matches(script);
 
 			lock(thingInfoOverrideLock)
@@ -1156,12 +1156,18 @@ namespace CodeImp.DoomBuilder.UDBScript
 					if(!m.Success) continue;
 
 					int type;
-					if(!int.TryParse(m.Groups[3].Value, out type)) continue;
+					if(!int.TryParse(m.Groups[4].Value, out type)) continue;
 
-					string classId = UnescapeJsString(m.Groups[1].Value);
-					string title = UnescapeJsString(m.Groups[2].Value);
+					string game = UnescapeJsString(m.Groups[1].Value);
+					string classId = UnescapeJsString(m.Groups[2].Value);
+					string title = UnescapeJsString(m.Groups[3].Value);
 					if(string.IsNullOrEmpty(title))
 						title = classId;
+
+					if(string.Equals(game, "OQUAKE", StringComparison.OrdinalIgnoreCase))
+						title += " (OQUAKE)";
+					else if(string.Equals(game, "ODOOM", StringComparison.OrdinalIgnoreCase))
+						title += " {ODOOM}";
 
 					thingInfoOverrideCache[type] = new KeyValuePair<string, string>(title, classId);
 				}

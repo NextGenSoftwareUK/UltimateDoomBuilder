@@ -80,8 +80,9 @@ namespace ExtractOquakeSprites
 			Console.WriteLine("  palette: fallback (grayscale)");
 		}
 
-		// Target longest side in pixels so Quake sprites match Doom sprite scale in the editor (Doom keycard is large; 1024 so golden key ~matches blue keycard).
-		const int TARGET_MAX_SIZE = 1024;
+		// Target longest side in pixels for editor/runtime-friendly sprite sizes.
+		// 64 keeps OQUAKE keys/items close to Doom sprite scale instead of oversized 1024px outputs.
+		const int TARGET_MAX_SIZE = 64;
 
 		static int Main(string[] args)
 		{
@@ -167,11 +168,13 @@ namespace ExtractOquakeSprites
 				int fullW = w, fullH = h;
 				byte[] fullRgba = skinRgba;
 				ScaleToTargetSize(ref fullRgba, ref fullW, ref fullH);
+				PrepareSpriteAlpha(ref fullRgba, fullW, fullH);
 				// Save full image to SpritesFull
 				WritePng(Path.Combine(spritesFullPath, uniqueType + ".png"), fullW, fullH, fullRgba);
 				// Crop to first half (front side) for editor Sprites folder
 				byte[] frontRgba; int frontW, frontH;
 				CropToFirstHalf(fullRgba, fullW, fullH, out frontRgba, out frontW, out frontH);
+				PrepareSpriteAlpha(ref frontRgba, frontW, frontH);
 				WritePng(Path.Combine(outPath, uniqueType + ".png"), frontW, frontH, frontRgba);
 				Console.WriteLine("  " + pakName + " " + w + "x" + h + " -> " + uniqueType + ".png (front " + frontW + "x" + frontH + ", full " + fullW + "x" + fullH + ")");
 				count++;
@@ -273,6 +276,92 @@ namespace ExtractOquakeSprites
 			height = newH;
 		}
 
+		/// <summary>
+		/// Normalize alpha and remove flat border-connected background regions.
+		/// Input buffer is BGRA (as used by Format32bppArgb memory layout in this tool).
+		/// </summary>
+		static void PrepareSpriteAlpha(ref byte[] rgba, int width, int height)
+		{
+			if (rgba == null || width <= 0 || height <= 0) return;
+			int pixels = width * height;
+			if (pixels <= 0) return;
+
+			// 1) Estimate border background color.
+			long sumR = 0, sumG = 0, sumB = 0;
+			int borderCount = 0;
+			for (int x = 0; x < width; x++)
+			{
+				int top = (x * 4);
+				int bot = ((height - 1) * width + x) * 4;
+				sumB += rgba[top]; sumG += rgba[top + 1]; sumR += rgba[top + 2]; borderCount++;
+				sumB += rgba[bot]; sumG += rgba[bot + 1]; sumR += rgba[bot + 2]; borderCount++;
+			}
+			for (int y = 1; y < height - 1; y++)
+			{
+				int left = (y * width) * 4;
+				int right = (y * width + (width - 1)) * 4;
+				sumB += rgba[left]; sumG += rgba[left + 1]; sumR += rgba[left + 2]; borderCount++;
+				sumB += rgba[right]; sumG += rgba[right + 1]; sumR += rgba[right + 2]; borderCount++;
+			}
+			if (borderCount <= 0) return;
+			int bgR = (int)(sumR / borderCount);
+			int bgG = (int)(sumG / borderCount);
+			int bgB = (int)(sumB / borderCount);
+
+			// 2) Flood-fill from edges and clear border-connected background.
+			const int BG_TOL = 42; // Manhattan RGB distance threshold
+			bool[] visited = new bool[pixels];
+			var qx = new Queue<int>();
+			var qy = new Queue<int>();
+			Action<int, int> enqueue = (xx, yy) =>
+			{
+				if (xx < 0 || yy < 0 || xx >= width || yy >= height) return;
+				int idx = yy * width + xx;
+				if (visited[idx]) return;
+				visited[idx] = true;
+				qx.Enqueue(xx);
+				qy.Enqueue(yy);
+			};
+			for (int x = 0; x < width; x++) { enqueue(x, 0); enqueue(x, height - 1); }
+			for (int y = 1; y < height - 1; y++) { enqueue(0, y); enqueue(width - 1, y); }
+
+			while (qx.Count > 0)
+			{
+				int x = qx.Dequeue();
+				int y = qy.Dequeue();
+				int p = (y * width + x) * 4;
+				byte a = rgba[p + 3];
+				if (a == 0) continue;
+				int dist = Math.Abs(rgba[p + 2] - bgR) + Math.Abs(rgba[p + 1] - bgG) + Math.Abs(rgba[p] - bgB);
+				if (dist > BG_TOL) continue;
+				rgba[p + 3] = 0;
+				enqueue(x - 1, y);
+				enqueue(x + 1, y);
+				enqueue(x, y - 1);
+				enqueue(x, y + 1);
+			}
+
+			// 3) Normalize alpha range [minA..maxA] -> [0..255] for cleaner masked rendering.
+			byte minA = 255, maxA = 0;
+			for (int i = 0; i < pixels; i++)
+			{
+				byte a = rgba[i * 4 + 3];
+				if (a < minA) minA = a;
+				if (a > maxA) maxA = a;
+			}
+			if (minA > 0 && maxA > minA)
+			{
+				int denom = maxA - minA;
+				for (int i = 0; i < pixels; i++)
+				{
+					int p = i * 4 + 3;
+					int na = ((rgba[p] - minA) * 255) / denom;
+					if (na < 8) na = 0;
+					rgba[p] = (byte)na;
+				}
+			}
+		}
+
 		static void WritePng(string path, int width, int height, byte[] rgba)
 		{
 			using (var bmp = new Bitmap(width, height, PixelFormat.Format32bppArgb))
@@ -338,6 +427,7 @@ namespace ExtractOquakeSprites
 		}
 	}
 }
+
 
 
 

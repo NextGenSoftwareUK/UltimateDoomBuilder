@@ -79,10 +79,11 @@ namespace CodeImp.DoomBuilder.Controls
 			string displayTitle = ti.Title;
 			string displayClassName = ti.ClassName;
 			KeyValuePair<string, string> thingInfoOverride;
-			if(!ti.IsKnown && General.TryGetThingInfoOverride(t.Type, out thingInfoOverride))
+			if(General.TryGetThingInfoOverride(t.Type, out thingInfoOverride))
 			{
 				displayTitle = thingInfoOverride.Key;
-				displayClassName = thingInfoOverride.Value;
+				if(!ti.IsKnown || string.IsNullOrEmpty(displayClassName) || displayClassName.StartsWith("$"))
+					displayClassName = thingInfoOverride.Value;
 			}
 
 			// Get thing action information

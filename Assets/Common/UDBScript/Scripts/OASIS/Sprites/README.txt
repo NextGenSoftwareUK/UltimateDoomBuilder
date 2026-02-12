@@ -21,3 +21,4 @@ loads from):
   ExtractOquakeSprites.exe "C:\path\to\id1" "C:\path\to\this\Sprites\folder"
 See IMPORT_FROM_QUAKE.txt in this folder.
 
+

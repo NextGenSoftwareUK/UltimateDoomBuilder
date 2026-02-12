@@ -103,3 +103,4 @@ UDB.log("OASIS STAR: Selected " + row[3] + " (type " + row[4] + "). Click on the
 
 
 
+
